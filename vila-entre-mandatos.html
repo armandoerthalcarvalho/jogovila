@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#173b32">
+<meta name="color-scheme" content="light">
+<title>Vila: Entre Mandatos</title>
+<style>
+/* ============ tokens & base ============ */
+:root{--ink:#22382e;--muted:#68766a;--paper:#f4efe1;--panel:#fffdf6;--line:#e3dbc6;--green:#2c6a4b;--green2:#dcebdd;--gold:#c99a3f;--gold2:#f2e6c8;--red:#9a5144;--blue:#3f5f7d;--shadow:0 10px 30px #16241b1f;--shadow-lg:0 30px 80px #0d1b16b0;--r:16px}
+*{box-sizing:border-box}html,body{height:100%}
+body{margin:0;background:#e8e5d8;color:var(--ink);font:14px/1.5 "Trebuchet MS",Verdana,Arial,sans-serif;overflow:hidden;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}button:disabled{opacity:.45;cursor:not-allowed}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #d3a347;outline-offset:2px}
+h1,h2,h3,.season,.govname{font-family:Georgia,"Times New Roman",serif}
+::-webkit-scrollbar{width:9px;height:9px}::-webkit-scrollbar-thumb{background:#cfc7ae;border-radius:9px}::-webkit-scrollbar-track{background:transparent}
+/* ============ layout ============ */
+.game{height:100vh;display:grid;grid-template-columns:256px minmax(360px,1fr) 300px;gap:14px;padding:14px;max-width:1840px;margin:auto}
+.left,.right{display:flex;flex-direction:column;gap:12px;min-height:0}.main{display:flex;flex-direction:column;gap:12px;min-width:0;min-height:0}
+.brand,.card,.nav,.feed,.canvasbox{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
+/* ============ brand ============ */
+.brand{padding:18px 16px;background:linear-gradient(150deg,#1b4437,#173b32);color:#f8f1dc;position:relative;overflow:hidden}
+.brand:after{content:"";position:absolute;width:110px;height:110px;border:1px solid #ffffff22;border-radius:50%;right:-32px;top:-42px;box-shadow:0 0 0 16px #ffffff0c,0 0 0 32px #ffffff08}
+.brand small{letter-spacing:.16em;text-transform:uppercase;color:#d6c99d;font-size:10px}
+.brand h1{font-weight:700;font-size:22px;line-height:1.05;margin:8px 0}
+.brand p{font-size:11px;color:#d4ddcf;margin:0;max-width:190px}
+/* ============ nav ============ */
+.nav{padding:8px;display:grid;gap:4px}
+.nav button{border-radius:10px;text-align:left;padding:10px 11px;font-weight:700;color:#59665b;transition:.15s;display:flex;align-items:center;gap:6px}
+.nav button:hover{background:#f1eee4}.nav button.active{background:var(--green2);color:#23593f}
+.nav .ico{display:inline-block;width:25px;flex:none;color:#548364}.nav .kbd{margin-left:auto;font-size:10px;color:#a9a288}
+/* ============ hint & actions ============ */
+.hint{padding:12px 14px;background:#f1e9d5;border:1px solid #e3d5b5;border-radius:13px;color:#665632;font-size:12px}
+.hint strong{display:block;margin-bottom:3px;color:#514526}
+.bottom-actions{margin-top:auto;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.smallbtn,.action{background:#edf0e7;border:1px solid #dce2d5;padding:9px 10px;border-radius:10px;font-weight:700;transition:.12s}
+.smallbtn:hover:not(:disabled),.action:hover:not(:disabled){background:#e0eadc;transform:translateY(-1px)}
+.smallbtn.primary,.action.primary{background:#286848;color:#fff;border-color:#286848}
+.smallbtn.primary:hover:not(:disabled),.action.primary:hover:not(:disabled){background:#1e583b}
+.smallbtn.gold,.action.gold{background:#e9d9a8;border-color:#d9c286;color:#6b5316}
+.action.danger{color:#8d463e;background:#f7e9e3;border-color:#ebd1c7}
+.action.danger:hover:not(:disabled){background:#f0dad1}
+/* ============ topbar ============ */
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.season{font-size:21px;font-weight:700}
+.season small{font:12px "Trebuchet MS",Verdana,sans-serif;color:var(--muted);display:block;font-weight:400}
+.weather{border-radius:20px;padding:7px 13px;background:#f3eddd;color:#78613b;font-size:12px;white-space:nowrap;border:1px solid #e7dcc2}
+/* ============ world ============ */
+.canvasbox{position:relative;flex:1;min-height:300px;overflow:hidden;background:#98b87b;border-radius:var(--r)}
+.canvasbox canvas{width:100%;height:100%;display:block}
+.world-label{position:absolute;left:14px;top:12px;color:#fff9e9;text-shadow:0 2px 5px #233b29;font-size:12px;pointer-events:none;z-index:1}
+.toast{position:absolute;left:50%;top:16px;transform:translateX(-50%);background:#193c32ed;color:#fff7e2;padding:10px 16px;border-radius:24px;box-shadow:var(--shadow);z-index:3;max-width:92%;text-align:center;opacity:0;transition:opacity .25s;pointer-events:none;font-size:13px}
+.toast.show{opacity:1}
+.maptip{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:#fffdf0ee;border:1px solid #fff;border-radius:20px;padding:7px 14px;font-size:12px;color:#405343;white-space:nowrap;box-shadow:0 3px 12px #21352222;z-index:2;pointer-events:none;max-width:94%;overflow:hidden;text-overflow:ellipsis}
+/* ============ touch controls ============ */
+#touchpad{display:none;position:fixed;bottom:16px;left:16px;z-index:6;grid-template-columns:56px 56px 56px;grid-template-rows:56px 56px;gap:6px}
+body.touch #touchpad{display:grid}
+#touchpad button{background:#193c32d9;color:#fff7e2;border-radius:14px;font-size:20px;border:1px solid #ffffff2e;touch-action:none}
+#touchpad button:active{background:#2c6a4b}
+#tUp{grid-column:2;grid-row:1}#tLeft{grid-column:1;grid-row:2}#tRight{grid-column:3;grid-row:2}#tDown{grid-column:2;grid-row:2}
+#tAct{display:none;position:fixed;bottom:30px;right:20px;z-index:6;width:76px;height:76px;border-radius:50%;background:#c99a3fe6;color:#3a2c07;font-size:22px;font-weight:700;border:3px solid #fff7e2;box-shadow:0 8px 24px #14261c55;touch-action:none}
+body.touch #tAct{display:block}#tAct:active{background:#e0b45c}
+/* ============ right cards ============ */
+.right .card{padding:14px}
+.card h2{font-size:15px;font-weight:700;margin:0 0 11px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stat{background:#f5f3eb;border-radius:11px;padding:9px}
+.stat span{display:block;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.06em}
+.stat strong{font-size:16px}
+.meter{height:6px;background:#e0e4d9;border-radius:9px;margin-top:5px;overflow:hidden}
+.meter i{height:100%;display:block;background:#79a862;border-radius:9px;transition:width .3s}
+.meter.gold i{background:var(--gold)}.meter.red i{background:#b0664f}
+.govcard{background:#e8f0e4}
+.govname{font-size:17px;font-weight:700}
+.axis{margin-top:9px;font-size:11px}
+.axisline{height:5px;background:linear-gradient(90deg,#c18b62,#e6e0c4,#6c9e74);border-radius:4px;margin:5px 0;position:relative}
+.axisline i{position:absolute;top:-2px;width:9px;height:9px;border:2px solid #fff;background:#244d39;border-radius:50%;transform:translateX(-50%);transition:left .3s}
+.policyrow{font-size:11px;color:#57674f;margin-top:7px;border-top:1px dashed #cfdec9;padding-top:7px}
+.feed{padding:12px 14px;max-height:170px;overflow:auto;flex:none}
+.feed h2{font-size:13px;margin:0 0 8px}
+.feed p{font-size:11px;color:#667264;margin:7px 0;border-bottom:1px solid #efede5;padding-bottom:6px}
+.feed p:last-child{border:0;padding:0}
+/* ============ modal ============ */
+.overlay{position:fixed;inset:0;background:#14251fc9;display:none;align-items:center;justify-content:center;padding:20px;z-index:60;backdrop-filter:blur(4px)}
+.overlay.open{display:flex}
+.modal{width:min(880px,96vw);max-height:90vh;overflow:auto;background:var(--paper);border:1px solid #fff9;border-radius:20px;box-shadow:var(--shadow-lg);padding:24px;animation:panelIn .18s ease-out}
+.modal.narrow{width:min(600px,96vw)}
+.modalhead{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;border-bottom:1px solid var(--line);padding-bottom:13px;margin-bottom:16px}
+.modalhead h2{font-size:25px;font-weight:700;margin:0}
+.modalhead p{color:var(--muted);margin:5px 0 0}
+.close{width:34px;height:34px;border-radius:50%;background:#ebe7da;font-size:20px;flex:none}
+.close:hover{background:#dfd8c6}
+@keyframes panelIn{from{transform:translateY(10px);opacity:0}to{transform:none;opacity:1}}
+/* ============ content bits ============ */
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:13px}
+.tile h3{margin:0 0 6px;font-size:15px;font-weight:700}
+.tile p{font-size:12px;color:#687469;margin:5px 0}
+.tile .action,.tile .smallbtn{margin-top:8px;width:100%}
+.tag{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#52745a}
+.row{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}
+.row:last-child{border:0}
+.muted{color:var(--muted)}
+.pill{display:inline-block;background:#e8eade;border-radius:20px;padding:3px 9px;font-size:11px;white-space:nowrap}
+.pill.gold{background:var(--gold2);color:#6b5316}.pill.red{background:#f3ddd6;color:#8d463e}.pill.blue{background:#dbe4ee;color:#3f5f7d}
+.warning{color:#8d5143}.good{color:#2d704e}
+.scroll{max-height:52vh;overflow:auto;padding-right:4px}
+.notice{background:#f3ecd8;padding:12px;border-radius:11px;font-size:12px;margin-bottom:10px}
+.tipbox{background:#f2eddd;border-left:3px solid #a67f42;padding:12px 14px;border-radius:7px;margin:10px 0;color:#4f574b;font-size:13px}
+.ledger{font-variant-numeric:tabular-nums}
+.kbd{display:inline-block;background:#e9e4d2;border:1px solid #cfc7ae;border-bottom-width:3px;border-radius:7px;padding:1px 7px;font-size:11px;font-weight:700;color:#4c574b;margin:0 2px;white-space:nowrap}
+input[type=number],input[type=text]{padding:7px;border:1px solid #d8d2c3;border-radius:8px;background:#fff;font:inherit;width:70px}
+.celldots{display:grid;grid-template-columns:repeat(3,14px);gap:5px;margin:6px 0}
+.celldot{width:14px;height:14px;border-radius:4px;background:#e4dec9;border:1px solid #cfc7ae}
+.celldot.grow{background:#9dc57e;border-color:#6f9b55}.celldot.ready{background:#e2b950;border-color:#b48d2c;box-shadow:0 0 6px #e2b95088}
+.celldot.illegal{background:#d98b7c;border-color:#9a5144}
+.vbar{height:14px;background:#eee8d6;border-radius:8px;overflow:hidden;margin:4px 0 8px}
+.vbar i{display:block;height:100%;background:var(--green);border-radius:8px;transition:width .4s}
+.vbar.win i{background:var(--gold)}
+.dportrait{width:56px;height:56px;border-radius:50%;flex:none;border:3px solid #fff;box-shadow:0 3px 10px #0002;display:grid;place-items:center;font:700 22px Georgia,serif;color:#fff}
+.dbox{display:flex;gap:14px;align-items:flex-start;margin:14px 0}
+.dline{font:italic 15px/1.55 Georgia,serif;background:#fbf8ec;border:1px solid var(--line);border-radius:13px;padding:14px 16px;color:#3d4c3f}
+.dmeta{font-size:11px;color:var(--muted);margin-top:8px}
+.alert{display:flex;gap:9px;align-items:flex-start;background:#f6ecd9;border:1px solid #ecd9ab;border-radius:11px;padding:9px 12px;font-size:12px;margin:8px 0}
+.alert.blue{background:#e6edf4;border-color:#c4d3e2}
+.projbar{height:9px;background:#e4e7da;border-radius:8px;overflow:hidden;margin:6px 0 4px}
+.projbar i{display:block;height:100%;background:#7ba55f}
+.ratio{font-variant-numeric:tabular-nums}
+/* ============ start & ending ============ */
+.startscreen,.ending{position:fixed;inset:0;background:radial-gradient(ellipse at 70% 40%,#8caa73,#2e5845 50%,#17372f);z-index:40;display:none;align-items:center;justify-content:center;padding:22px;color:#fff5dd}
+.startscreen.show,.ending.show{display:flex}
+.startbox{width:min(1000px,96vw);display:grid;grid-template-columns:1.15fr .85fr;gap:28px;align-items:center}
+.startcopy{padding:22px}
+.eyebrow{letter-spacing:.2em;text-transform:uppercase;color:#ead8a7;font-size:11px}
+.startcopy h1{font-weight:700;font-size:clamp(42px,7vw,78px);line-height:.96;margin:16px 0}
+.startcopy p{max-width:600px;color:#e0e9d8;font-size:16px}
+#menuMessage{color:#ffe3a5;font-size:13px;margin:8px 0}
+.startactions{display:grid;gap:10px;max-width:300px;margin-top:24px}
+.startactions button{padding:13px 16px;border-radius:11px;font-weight:700;text-align:left;background:#f6f0df;color:#244333;transition:.15s}
+.startactions button:hover{transform:translateY(-1px);background:#fff}
+.startactions button.secondary{background:#ffffff19;color:#f7f2e4;border:1px solid #ffffff4d}
+.startfeats{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px;max-width:560px}
+.startfeats span{background:#ffffff14;border:1px solid #ffffff2b;border-radius:20px;padding:5px 12px;font-size:11px}
+.startart{height:400px;border:1px solid #ffffff33;border-radius:50% 50% 18px 18px;background:linear-gradient(#e4c77f 0 32%,#97b879 33% 67%,#785d3e 68%);position:relative;overflow:hidden;box-shadow:0 25px 80px #12291d66}
+.startart:before{content:"";position:absolute;inset:56% -8% -5%;background:repeating-linear-gradient(172deg,transparent 0 25px,#557846 26px 31px,transparent 32px 48px)}
+.sun{position:absolute;width:62px;height:62px;border-radius:50%;background:#fff0b4;top:45px;right:70px;box-shadow:0 0 40px #fff0b4aa}
+.hill{position:absolute;bottom:80px;left:-15%;width:75%;height:160px;background:#668657;border-radius:50% 50% 0 0}
+.hut{position:absolute;bottom:100px;left:39%;width:130px;height:100px;background:#e7d4a7;border:4px solid #6c4c34;clip-path:polygon(50% 0,100% 38%,92% 38%,92% 100%,8% 100%,8% 38%,0 38%)}
+.hut:after{content:"";position:absolute;bottom:0;left:46px;width:34px;height:55px;background:#76533a}
+.tree{position:absolute;bottom:45px;left:16%;width:36px;height:115px;background:#654a31}
+.tree:before{content:"";position:absolute;left:-32px;top:-35px;width:100px;height:90px;border-radius:50%;background:#47714a;box-shadow:28px 10px 0 -14px #c57e46}
+.hill2{position:absolute;right:-13%;bottom:105px;width:64%;height:155px;background:#799866;border-radius:60% 60% 0 0}
+.bird{position:absolute;width:14px;height:5px;border-top:3px solid #3f5648;border-radius:50% 0}
+.ending{background:radial-gradient(ellipse at center,#41664b,#193b32)}.ending .modal{color:var(--ink)}
+.election-result{background:#e5eee0;padding:14px;border-radius:12px;margin-bottom:12px}
+/* ============ responsive ============ */
+@media(max-width:1150px){body{overflow-y:auto}.game{grid-template-columns:216px minmax(300px,1fr);grid-template-rows:minmax(0,1fr) auto;height:auto;min-height:100vh}
+.right{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr 1fr;align-items:stretch}.right .feed{max-height:140px}.game{height:auto}}
+@media(max-width:780px){body{overflow:auto}.game{display:flex;flex-direction:column;padding:10px;gap:10px}
+.left{display:contents}.brand{order:0;padding:14px}.brand h1{font-size:19px}.brand p{max-width:none}
+.nav{order:1;display:flex;overflow-x:auto;padding:6px;gap:3px}.nav button{white-space:nowrap;padding:8px 10px}.nav .ico{width:18px}.nav .kbd{display:none}
+.hint{order:3}.bottom-actions{order:4;margin:0;grid-template-columns:repeat(3,1fr)}
+.main{order:2}.topbar{padding:2px 4px}.season{font-size:17px}
+.canvasbox{height:56vh;min-height:340px;flex:none}
+.right{order:5;display:grid;grid-template-columns:1fr 1fr}.right .feed{grid-column:1/-1}
+.stats{gap:5px}.stat{padding:7px}
+.startbox{display:block}.startart{display:none}.startcopy{padding:10px}
+.modal{padding:17px}.grid3{grid-template-columns:1fr}.grid4{grid-template-columns:1fr 1fr}.grid2{grid-template-columns:1fr}.scroll{max-height:48vh}
+#touchpad{bottom:12px;left:12px}#tAct{bottom:22px;right:14px}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="game" id="gameUI" style="display:none">
+  <aside class="left">
+    <section class="brand"><small>Uma vida entre estações</small><h1>Vila: Entre Mandatos</h1><p>Uma comunidade pequena. Ideias grandes. A vida continua sob cada governo.</p></section>
+    <nav class="nav" id="tabs" aria-label="Painéis do jogo">
+      <button data-tab="Resumo" class="active"><span class="ico">◈</span>Resumo<span class="kbd">1</span></button>
+      <button data-tab="Agricultura"><span class="ico">⌁</span>Agricultura<span class="kbd">2</span></button>
+      <button data-tab="Mercado"><span class="ico">◇</span>Mercado<span class="kbd">3</span></button>
+      <button data-tab="Vila"><span class="ico">⌂</span>Vila<span class="kbd">4</span></button>
+      <button data-tab="Governo"><span class="ico">⚖</span>Governo<span class="kbd">5</span></button>
+      <button data-tab="Diário"><span class="ico">▤</span>Diário<span class="kbd">6</span></button>
+    </nav>
+    <div class="hint"><strong>Ao seu redor</strong><span id="contextHint">Explore a vila para encontrar algo.</span></div>
+    <div class="bottom-actions">
+      <button class="smallbtn" data-action="wait">⌛ Esperar</button>
+      <button class="smallbtn" data-action="save">Salvar</button>
+      <button class="smallbtn" data-action="help">❔ Como jogar</button>
+      <button class="smallbtn" data-action="controls">⌨ Controles</button>
+      <button class="smallbtn danger" data-action="menu">☰ Menu</button>
+    </div>
+  </aside>
+  <main class="main">
+    <div class="topbar"><div class="season" id="dateLabel">1º de janeiro<small>Ano 1 · 08:00</small></div><div class="weather" id="weatherLabel">☀ Céu aberto</div></div>
+    <div class="canvasbox">
+      <canvas id="world" aria-label="Mapa da vila"></canvas>
+      <div class="world-label">VILA DO IPÊ · SERRA DO VALE</div>
+      <div class="toast" id="toast" role="status"></div>
+      <div class="maptip" id="mapTip">WASD / setas para andar · E para interagir</div>
+    </div>
+  </main>
+  <aside class="right">
+    <section class="card"><h2>Seu dia</h2><div class="stats">
+      <div class="stat"><span>Idade</span><strong id="ageStat">19 anos</strong></div>
+      <div class="stat"><span>Dinheiro</span><strong id="moneyStat">$120,00</strong></div>
+      <div class="stat"><span>Energia</span><strong id="energyStat">100%</strong><div class="meter"><i id="energyBar" style="width:100%"></i></div></div>
+      <div class="stat"><span id="repLabel">Renome</span><strong id="repTitle">Morador</strong><div class="meter gold"><i id="repBar" style="width:50%"></i></div></div>
+    </div></section>
+    <section class="card govcard"><h2>Governo atual</h2><div class="govname" id="govName">—</div>
+      <div class="axis">Agricultura <b id="axisAValue"></b><div class="axisline"><i id="axisA"></i></div><div class="muted">Trigo ← · → Mangas</div></div>
+      <div class="axis">Liberdade e ordem <b id="axisOValue"></b><div class="axisline"><i id="axisO"></i></div><div class="muted">Liberdade ← · → Ordem</div></div>
+      <div class="policyrow" id="policyNote">—</div>
+    </section>
+    <section class="feed"><h2>Notícias da vila</h2><div id="feedItems"></div></section>
+  </aside>
+</div>
+<div id="touchpad"><button id="tUp" aria-label="Andar para cima">▲</button><button id="tLeft" aria-label="Andar para a esquerda">◀</button><button id="tRight" aria-label="Andar para a direita">▶</button><button id="tDown" aria-label="Andar para baixo">▼</button></div>
+<button id="tAct" aria-label="Interagir">E</button>
+<div class="overlay" id="overlay" role="dialog" aria-modal="true"><section class="modal" id="modal"></section></div>
+<section class="startscreen show" id="startScreen">
+ <div class="startbox"><div class="startcopy"><div class="eyebrow">Uma simulação de vida rural</div><h1>Vila:<br>Entre Mandatos</h1><p>Plante, pesque, trabalhe e construa sua vida. Governos mudam as regras — impostos, preços, invasões e eleições — e cada pessoa encontra seu próprio caminho.</p>
+ <div class="startactions">
+   <button data-action="new">Começar uma nova vida</button>
+   <button data-action="continue" id="continueBtn">Continuar campanha</button>
+   <button class="secondary" data-action="help">Como jogar</button>
+ </div>
+ <p id="menuMessage" role="status" hidden></p>
+ <div class="startfeats"><span>🌾 Estações e clima</span><span>🗳️ Eleições com seu voto</span><span>⚖ Duas ideologias em disputa</span><span>🤝 Amizades com efeito real</span><span>🚜 Ocupações irregulares de terra</span><span>🏗️ Obras da comunidade</span></div>
+ </div><div class="startart"><div class="sun"></div><div class="bird" style="top:70px;left:38%"></div><div class="bird" style="top:84px;left:46%;transform:scaleX(-1)"></div><div class="hill"></div><div class="hill2"></div><div class="hut"></div><div class="tree"></div></div></div>
+</section>
+<section class="ending" id="endingScreen"><div class="modal" id="endingContent"></div></section>
+<script>
+(()=>{"use strict";
+/* ================= ambiente & helpers ================= */
+const DOM=(typeof document!=="undefined"&&document&&typeof document.getElementById==="function"&&document.getElementById("world"))?document:null;
+const HASLS=(typeof localStorage!=="undefined");
+const $=s=>DOM?DOM.querySelector(s):null,$$=s=>DOM?Array.from(DOM.querySelectorAll(s)):[];
+const el=id=>DOM?DOM.getElementById(id):null;
+const canvas=DOM?DOM.querySelector("#world"):null,ctx=canvas?canvas.getContext("2d"):null;
+const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
+const rand=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const randf=(a,b)=>Math.random()*(b-a)+a;
+const choice=a=>a[Math.floor(Math.random()*a.length)];
+const chance=p=>Math.random()<p;
+const MONTHS=["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
+const MLEN=[31,28,31,30,31,30,31,31,30,31,30,31];
+const money=n=>{try{return new Intl.NumberFormat("pt-BR",{style:"currency",currency:"USD"}).format(n).replace("US$","$")}catch(e){return "$"+(Math.round(n*100)/100).toFixed(2)}};
+const fmtDate=day=>{let d=((day%365)+365)%365,m=0;while(d>=MLEN[m])d-=MLEN[m++];return `${d+1} de ${MONTHS[m]}`};
+const pad2=n=>String(Math.floor(n)).padStart(2,"0");
+const escapeHTML=v=>String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function idp(prefix){return prefix+"-"+Math.random().toString(36).slice(2,9)}
+/* ================= constantes ================= */
+const C={SAVE:"vila-entre-mandatos-save-v2",VERSION:2,POP:50,START_MONEY:150,START_AGE:19,START_SEEDS:8,START_SAPLING:1,ENERGY:100,TILE:32,MAP_W:38,MAP_H:28,SPEED:4.4,RUN_MULT:1.75,WHEAT_GROW:7,MANGO_GROW:25,MANGO_CYCLE:12,WHEAT_SEED:3,MANGO_SAPLING:24,WHEAT_PRICE:7,MANGO_PRICE:14,FISH_PRICE:5,EGG_PRICE:3,CHICKEN_PRICE:38,MAX_CHICKENS:8,LAND_PRICE:140,RENT_PRICE:22,RENT_DAYS:90,PERMIT_BASE:70,ELECTION_EVERY:1460,CAMPAIGN_DAYS:60,VOTE_WINDOW:10,ENDORSE_DAYS:40,MAX_EVENTS:500};
+const SEASONS={verao:{label:"Verão",icon:"☀",mult:1.0,grass:["#a3c17f","#98b87b","#a9c986"]},outono:{label:"Outono",icon:"🍂",mult:0.95,grass:["#a8b47a","#9cae72","#b3ab6c"]},inverno:{label:"Inverno",icon:"❄",mult:0.8,grass:["#9db384","#93a97c","#a5b98c"]},primavera:{label:"Primavera",icon:"🌸",mult:1.15,grass:["#a7c884","#9cba7d","#b0d18e"]}};
+const WEATHERS={"Céu aberto":{icon:"☀",growth:1.0},"Chuva leve":{icon:"☂",growth:1.2},"Tempestade":{icon:"⛈",growth:0.9},"Seca":{icon:"🌫",growth:0.6}};
+function seasonOf(day){const d=((day%365)+365)%365;if(d<80)return"verao";if(d<172)return"outono";if(d<263)return"inverno";return"primavera"}
+/* ================= dados de pessoas ================= */
+const names=["Ana","Antônio","Beatriz","Bento","Caio","Cecília","Davi","Dona Célia","Elias","Elisa","Emília","Felipe","Francisca","Gabriel","Helena","Iara","Isabel","João","Joaquim","Lara","Leonor","Lúcia","Manuel","Marina","Mateus","Mirela","Nair","Nilo","Olívia","Otávio","Paulo","Rafael","Rita","Rosa","Samuel","Sérgio","Tereza","Tomás","Valentina","Zeca"];
+const surnames=["Almeida","Barbosa","Carvalho","Costa","Duarte","Ferreira","Lima","Mendes","Oliveira","Pereira","Ribeiro","Santos","Silva","Souza","Teixeira"];
+const jobs=["agricultora","agricultor","artesã","artesão","trabalhadora","trabalhador","professora","professor","pescador","costureira","carpinteiro","cozinheira","vendedora","vendedor","enfermeira","mecânico","apicultora","bibliotecário","marceneira","motorista"];
+const TRAITS=["animado","ranzinta","sábio","curioso","fofoqueiro","prático"];
+const SKINS=["#bd805e","#d59a72","#e3b98e","#8f5b43","#f0c9a1"];
+const FEUD_REASONS=["uma cerca mal alinhada","a água da nascente","uma fofoca sem dono","um empréstimo nunca pago","ideias políticas opostas","um galo que madruga demais","um burro solto na horta","a herança de um terreno antigo","um negócio de leite desfeito","um pontapé numa panela"];
+const HOME_SPOTS=[[11,8.5],[13.5,10],[16,19],[17.5,21],[24,20],[25.5,22],[29,18],[31,20],[12,23],[14.5,25],[5,10],[6.5,12],[4,21],[6.5,23],[29,13],[28,15.5],[16,3.5],[19,4.5],[25,4],[31.5,5.5],[3,7],[9,4.5],[11,20.5],[22,24.5],[33,3.5],[3,26.5]];
+/* ================= biblioteca de diálogos =================
+   {nome} outro habitante · {gov} governador · {cultura} cultura favorecida · {outra} cultura rival
+   {preco} preço · {estacao} estação · {clima} clima · {dias} dias · {terreno} terreno · {motivo} motivo da briga */
+const GREET_COLD=["Ah. É você.","Não tenho nada a dizer.","Estou ocupado, se não se importa.","O que você quer desta vez?","Só isso que você veio fazer? Passar por aqui.","Hmph. Dia.","Simplesmente passe.","Não me chame, que eu não chamo.","Tenho plantação esperando. E você?","Não me obrigue a ser educado.","Já disse o que tinha a dizer.","Sua presença aí, me fazendo perder tempo.","Ande logo com isso.","Cada um com sua vida. Boa tarde."];
+const GREET_NEUTRAL=["Olá, vizinho.","Bom dia. Se é de manhã, claro.","Tudo em ordem por aí?","Como vão suas lavouras?","Dia duro, mas dia bom.","Que surpresa ver você por aqui.","Opa. Tudo bem?","Andando pela vila? Bom passeio.","Se precisar de algo, é só falar. Talvez.","Olá. Cuidado com o barro no caminho.","Bom te achar por aqui.","Salve. O {clima} de hoje não perdoa ninguém.","Tudo em paz na sua casa?","Estava mesmo pensando na vida. Você chegou na hora.","Saudações do fim da rua.","Hoje o dia pede paciência, né?","Você parece ocupado. Eu também.","Um dia desses temos que puxar assunto melhor.","Vizinho! Ande com jeito por aqui que o chão tá mole."];
+const GREET_WARM=["Que bom te ver!","Olha quem apareceu!","Senta um pouco, vamos trocar ideia!","Você é sempre bem-vindo aqui.","Ei! Justo a pessoa que eu queria ver.","Andava com saudade de uma boa conversa.","Ahá! Chegou bem. Tava quieto demais por aqui.","Vinde, vinde! Como é que vai?","Tudo certo com você? Espero que sim.","Deixa o trabalho um minuto e respira.","Bom te ver de pé e disposto.","Que sinal de vida boa!","Sua companhia cai bem em qualquer dia.","Ótimo timing — tava precisando de distrain.","Aí sim, uma cara conhecida e querida.","A vila fica melhor quando você aparece.","Se tivesse um banco aqui, eu convidava a sentar. Convido assim mesmo."];
+const GREET_FRIEND=["Meu amigo!","Chegou a pessoa certa no dia certo!","Você por aqui! Vem cá, conta as novidades.","Já sei: ou você quer conversa, ou quer conversa. As duas são bem-vindas.","Considera essa porta sempre aberta, viu?","Todo dia que você aparece é dia de festa pequena.","Nem precisa falar. Já sei que hoje rende conversa boa.","A amizade da gente é dessas que o tempo não apaga.","Ei, guarda um tempo pra mim mais tarde!","Você é parte desta vila, sabia?","Onde você anda? A gente se vê pouco e conversa menos.","Se eu tivesse irmão, seria do seu jeito.","Tá vendo esta sombra? Ela também é sua.","Bem-vindo à minha humilde alegria.","Ahá! O vento me avisou que você vinha.","Pode chegar mais perto, vizinho de verdade.","Uma hora dessas só melhora com sua presença.","Senta, que a história de hoje é comprida.","Você e eu: dois paus numa fogueira só.","Deus me dê paciência... e mais conversas com você."];
+const TOPIC_WEATHER_ABERTO=["Esse sol tá bom pra secar o trigo no pátio.","Dia claro assim é presente. Trigo adora.","Sol firme: bom pra lavoura, ruim pra quem vadiar.","Nem nuvem. Que seca de preocupação, né? Bom demais.","Com esse tempo, até a preguiça amadurece.","Sol assim me lembro de colheita de {estacao} passada.","Dia de céu limpo: dia de conta em dia, sem desculpa.","Está quente? Tá. Mas trigo não se queixa."];
+const TOPIC_WEATHER_CHUVA=["Chuva boa pro plantio, ruim pro barro da estrada.","Água caindo: suas sementes agradecem, seus sapatos não.","Eu adoro chuva. O telhado é que discorda.","Chuva assim acelera o crescimento, dizem os antigos.","Choveu, cresce. Choveu demais, apodrece. A conta tem que fechar.","Dia de chuva é dia de conserto de cerca e de pensamento.","Pegue um café. Chuva pede café.","A chuva lavou a vila. Tomara lave também os ânimos."];
+const TOPIC_WEATHER_TORMENTA=["Essa tempestade não me deixa dormir direito.","Trovejou tanto que o gado se assustou.","Tempo bravo assim, todo mundo reza pela lavoura.","Fechou o céu de vez. Cuidado com plantio pronto.","Tempestade derruba galho e resolve briga antiga.","Tá na hora de recolher o que presta e rezar pelo resto.","Raios de noite, lama de manhã.","Se o telhado aguentar, eu aguento."];
+const TOPIC_WEATHER_SECA=["Essa seca preocupa. Guarde água e paciência.","Seca não perdoa lavoura preguiçosa.","O rio baixou. O preço do peixe que suba.","Temporada seca: o que é plantado sofre devagar.","Seca ensina: cultive o que aguenta, venda o que dá.","Sem chuva, até a conversa fica ressecada.","Chuva no sertão é promessa; aqui é esperança atrasada.","Regue o que puder e conte os dias."];
+const TOPIC_POL_ALIGNED=["Esse {gov} entende a gente do campo, viu?","Com esse governo, quem planta {cultura} respira fundo.","A política de agora favorece {cultura}. Eu aprovo.","Finalmente um governo que respeita quem produz.","Os impostos de agora até que doêm menos.","Digo com orgulho: votei na direção certa. E voltarei.","{gov} governa como eu penso: sem enrolação.","Política boa é a que deixa o preço justo. A de agora deixa."];
+const TOPIC_POL_OPPOSED=["Esse {gov} vive noutro mundo. Neste aqui não.","Cada regra que sai da prefeitura, um amigo meu perde renda.","O governo favorece {outra} e esquece quem planta {cultura}.","Imposto alto, licença, papel... e fome do mesmo jeito.","Não me pergunte da política, que eu perco a educação.","A prefeitura devia andar mais no barro e menos no papel.","Se a eleição fosse amanhã, já sabe onde meu voto ia.","Uma hora esse povo acorda. Espero acordar junto.","Ordem demais estraga a alma da vila.","Liberdade demais, dizem. Eu digo: saudade demais."];
+const TOPIC_MARKET_HI=["Preço bom na feira: é dia de vender, não de olhar.","O trigo tá valendo mais que conversa fiada hoje.","Se você tem manga no estoque, coração satisfeito: preço em alta.","Feira assim eu até almoço melhor a semana inteira.","Vender com preço desses é quase dever cívico.","Anote: preço bom não espera colheita boazinha.","Estoque cheio com preço assim? Vá logo, antes de cair."];
+const TOPIC_MARKET_LO=["Preço baixo demais. Guardo o meu até subir.","Melhor comer a manga que vender por migalha.","Trigo por esse preço é desrespeito com o joelho que dobrou.","Se eu fosse você, plantava mesmo assim. Preço sobe e desce, terra fica.","Mercado avarento essa semana. Paciência é dinheiro.","Feira fraca. Compro pouco, converso muito.","Guarde tudo e espere o governo mudar. Sempre muda.","Nem o imposto se contenta com preço desses."];
+const TOPIC_FARM=["Chuva acelera, seca atrasa, tempestade destrói. Plante olhando o céu.","Onde há mato alto, há futuro alto. Onde há cerca caída, furto no sapato.","Trigo paga rápido, manga paga pra sempre. Diversifique e durma tranquilo.","Galinha é dinheiro que acorda cedo. Considere um galinheiro.","Nunca plante tudo na mesma semana. A fome não marca dia no calendário.","O rio dá peixe, mas cobra tempo e energia. Vá com o estômago pronto.","Terreno alugado vence. Renove antes de vencer.","Colheita madura é convite aberto pra gatuno. Não deixe passar dias.","Licença de expansão só aperta quem quer crescer. Cresça mesmo assim.","O sol de {estacao} não perdoa quem atrasa o plantio.","Adube com paciência, colha com pressa mínima.","Se o governo gosta de manga, plante trigo escondido. Brincadeira. Ou não."];
+const TOPIC_JOB={
+agricult:["Terra boa não é a que se tem, é a que se cuida.","Minha lavoura é minha segunda esposa. As duas reclamam do barro.","Colhi o dobro do ano passado. O dobro de dores nas costas também."],
+artes:["Fiz um banco essa semana. Venderam antes de eu sentar nele.","Mão que cria não pode tremer e nem duvidar.","Feira boa pra artesão é feira de chuva: todo mundo dentro do toldo."],
+pesc:["O rio conta histórias pra quem pescar ouvindo.","Peixe de bom tamanho engorda a paciência de quem espera.","Pescador que conversa muito espanta o peixe. Mas com você eu arrisco."],
+costur:["Cada remendo é um segredo que ninguém vê.","Tecido novo é festa; conserto é ofício.","Passei o dia costurando o mesmo bolso. Do mesmo lado, claro."],
+carpint:["Madeira boa se escolhe no som, não na cor.","Casa sem porta nova é casa sem bênção.","Serra, martelo, e um pensamento: dessa tá saindo um berço."],
+cozin:["Panela aberta, casa cheirosa, vizinho com fome.","Provei o tempero três vezes. A terceira foi por causa da alma.","Receita boa se divide; ingrediente bom se guarda."],
+vend:["Cliente feliz volta, cliente apressado reclama menos se eu conversar.","Mercado é conversa com preço na etiqueta.","Todo dia aprendo um troco novo. Às vezes até de dinheiro."],
+enferm:["Saúde da vila é cuidar antes de reclamar.","Um bom remédio: sopa quente e conversa melhor.","Quem planta cuida do corpo. Quem ignora a dor, eu visito depois."],
+mecanic:["Máquina parada é dinheiro em ponto de bala.","Aperto um parafuso e afrouxo uma preocupação.","O trator do Elias faz barulho de fome. Levo pro milho? Conserto mesmo."],
+apicult:["Abelha ensina: trabalho em grupo e doce no fim.","Cuidado onde pisar: o enxame novo mora na cerca do {terreno}.","Meu mel amadurece junto com minha paciência."],
+bibliotec:["Livro emprestado volta com cheiro de outra casa.","Tenho um mapa velho do vale. Dá até vontade de nele morar.","Silêncio da biblioteca é o barulho das ideias."],
+marcen:["Do tronco à mesa: cabe um mundo de escolha.","Madeira macia pede mão firme e cabeça leve.","Fiz uma janela hoje. Só faltou parede pra colocá-la."],
+motorist:["Estrada de terra: hoje ela me levou, amanhã eu levo ela.","Passageiro bom é o que dorme e acorda agradecendo.","Levei ovos pra cidade sem quebrar um. Dia de glória."],
+professor:["Criança aprende o que a vila mostra: trabalho, chuva e política.","Ensinei fração com pão. Dividiu, comeu, entendeu.","Escola é onde a vila planta futuro de gente."],
+trabalhad:["Dia de trabalho honesto não precisa de aplauso, só de jantar.","O sol não pergunta hora; eu também não.","Carrego pedra hoje pra carregar orgulho amanhã."]};
+const TOPIC_AGE_YOUNG=["Aproveita os joelhos enquanto eles ainda gostam de você.","Na tua idade eu achava que sabia tudo. Colhi o que plantei, literalmente.","Vida longa é a que se começa bem. Comece bem, ouvir?"];
+const TOPIC_AGE_MID=["Já não carrego saco como antes, mas carrego ideia melhor.","Meio da vida: metade aprendeu, metade desconfia.","Nessa altura, sei o que vale e o que só pesa."];
+const TOPIC_AGE_ELDER=["Vi muitos governos passarem. Esse também passa.","Anos ensinam o que a chuva nega: ninguém molha sozinho.","Na minha época a vila era menor e a briga, maior.","Tá tudo sempre mudando pra ficar parecido com antigamente."];
+const TOPIC_FEUD=["Não fala com {nome}, que eu não perco o dia com gente assim.","{nome} pisou na minha tolerância pela última vez. Por causa de {motivo}!","Se vir {nome} vindo, faça que não me conhece. Gentileza recíproca.","Briga boa é a que acaba com choro e sopa. Ainda tô esperando a sopa.","O {nome} acha que {motivo} se resolve com berro. Vai ver o que se resolve com silêncio.","Tô de relações cortadas. Corte limpo, sem sangue, com {nome}.","Perdi o sono por causa de {motivo}. O {nome} dorme que é uma beleza.","A meleca da briga tá no ar. Quem chegar perto cola.","Não quero mediador, quero razão. Mas se aparecer alguém sábio...","Dia de mercado eu evito a praça. Sabe por quê.","{nome} me deve desculpa e meia. A meia é a pior parte.","Isso entre eu e {nome} ainda ferve. Não mexa que sobe."];
+const TOPIC_GOSSIP=["Você soube que {nome} tá construindo cercado maior que o terreno? Coordenadas da vergonha.","Dizem que {nome} vendeu manga antes de amadurecer. Preço verde, consciência verde.","O {nome} foi visto de madrugada perto do terreno {terreno}. Tire suas conclusões.","{nome} anda rindo alto demais. Ou ganhou na rifa, ou sabe algo da eleição.","Juram que {nome} guardou semente boa e disse que acabou. Semente santa, né.","{nome} deu um jantar pra metade da vila. A outra metade tá de dieta de orgulho.","Anda um vento de fofoca no ar: {nome} e uma enxada que não é dele.","O galo do {nome} atrasou o relógio da rua toda. Drama matinal.","O {nome} aprendeu a ler. Agora lê em voz alta o que não deve.","Se o {nome} perguntar de mim: não me viu, não sabe, não contou."];
+const TOPIC_TIP=["Fique de olho no prazo de aluguel do terreno. Vencer é pior que chover na colheita.","Colheita pronta atrai gatuno de longe. Apressa o passo.","A eleição tá marcada pra daqui a {dias} dias. Já sabe em quem vota?","Com o governo atual, o imposto na venda é que nem tempero: sente depois.","Energia se recupera dormindo em casa. Comida da lavoura também ajuda.","Trabalhar no mercado paga o dia. Mas paga, paga mesmo, quem planta diversificado.","Doar pra obra da vila volta em fama e em benefício. É poupança de gente boa.","Converse com os vizinhos: amigo avisado perde menos trigo.","Se o governo é da ordem, denunciou, resolveu. Se é da confusão, nem gaste saliva.","Peixe de {estacao} engorda menos conversa: vá mesmo assim.","Prefeitura guarda seu dinheiro rendendo. Pouco, mas rende.","Governos mudam o preço de {cultura}. Plante depois de ler o vento da eleição."];
+const TOPIC_TRAIT={animado:["Cara de dia bom! É dia bom, né? Marquei no calendário mental.","Você chegou! Agora oficialmente o dia melhorou.","Estou rindo desde o café. Amanhã prometo parar."],ranzinta:["Alegria demais dá gastrite. Modere.","Se for pra reclamar, eu sou campeão. Não me provoque.","O mundo melhorou? Ninguém me avisou. Tava ocupado."],sábio:["Pergunta sábia: o que a chuva ensina? Escorrer com paciência.","A terra é o único juiz que aceita adubo como suborno.","Quem planta duas culturas, colhe duas verdades."],curioso:["E você, o que andou plantando de novo? Conta sem pedir segredo.","Novidade na vila some rápido. Qual você pegou hoje?","Sou tipo cuco: gosto de saber quem entrou e quem saiu do ninho."],fofoqueiro:["Segredo em vila pequena é pão quente: dura pouco e todos querem um pedaço.","Se eu te contar, você conta? Óbvio. Então escuta...","Notícia da vila dorme no meu ouvido e acorda na minha língua."],pratico:["Papo bom é o que termina com tarefa. Vamos?","Conversa não enche celeiro, mas enche a alma. Metade pro celeiro, então.","Feito é melhor que falado. Mas falado aquece o feito."]};
+const TOPIC_MEMORY=["Eu lembro do governo antes do {gov}. Tempos de vento diferente.","Meu avô dizia: mudou o governo, muda o preço, muda o humor da feira.","Já vi essa vila passar por tudo. O que muda é quem reclama primeiro.","Cada eleição me lembro de promessa antiga. Guardo no mesmo lugar: esqueço.","Os antigos contavam que a vila cabia numa quadra. Cabe, só que de conversa."];
+const TOPIC_GIFT=["Espere aí. Leve essas sementes, é sobra do meu lote.","Toma estas sementes de trigo. Presente de vizinho vale ouro.","Leve muda de mangueira! Da minha parte pra sua parte de terra.","Ouve: tem semente boa aqui sobrando. Sobra é sua, viu?","Trouxe da cidade umas sementes a mais. Divisão de amigo, leve."];
+const TOPIC_PROJECT=["A obra comunitária tá andando! Doar dá fama e benefício.","Um poço novo muda tudo, dizem. Esperança com alvenaria.","A estrada prometida vai cortar o furto de vez. Quero ver.","A escola, quando sair, vai formar mais cérebro que preguiça."];
+const TOPIC_INVA=["Gente sem terra às vezes pega terra sem gente. Cuidado com suas células livres.","Se brotar trigo onde você não plantou, não foi milagre.","Ocupação irregular é conversa na venda da bodega. Fique esperto.","Ouvi dizer que tem gente plantando onde não deve. Digo o nome? Digo: cuidado.","Terreno desocupado de dia é ocupado de noite, nessa vila grande de olho."];
+const TOPIC_RUMOR=["Dizem que vem feira ambulante. Guardo trocado desde já.","Circulou um forasteiro comprando manga a preço de ouro. Ou era de mentira.","Anda um grupo de pescadores acampando no rio. Peixe se escondendo com medo.","Falaram num festival na praça pra quando o ipê florir. Espero que eu que abra."];
+/* ================= estado ================= */
+let S=null,keys={},lastFrame=0,raf=0,activeTab="Resumo",modalKind=null,toaster=null,moveTarget=null,showMinimap=true,rainDrops=[],leaves=[],fireflies=[],flashT=0;
+function person(npcId,role="ordinary",occupation=null){const job=occupation||choice(jobs);return{id:npcId,name:choice(names)+" "+choice(surnames),age:rand(20,76),maxAge:rand(68,99),occupation:job,baseOccupation:job,role,A:rand(-100,100),O:rand(-100,100),wealth:rand(15,500),satisfaction:rand(42,66),hue:rand(0,359),skin:choice(SKINS),trait:choice(TRAITS),home:{x:5,y:5},x:0,y:0,tx:0,ty:0,moveAt:0,rel:0,lastTalk:-1,invaderCooldownUntil:0}}
+function createPopulation(){const spots=HOME_SPOTS.slice().sort(()=>Math.random()-.5);const a=[{id:"player",name:"Você",age:C.START_AGE,maxAge:rand(65,95),role:"player",occupation:"morador",A:0,O:0,wealth:0,satisfaction:70,hue:24,skin:"#e3b98e",trait:"prático",home:{x:9.5,y:16.5},x:9.5,y:16.5,tx:9.5,ty:16.5,rel:0}];for(let i=0;i<C.POP-1;i++){const role=i===0?"governor":i<4?"police":"ordinary";const p=person("n"+(i+1),role,role==="governor"?"servidora pública":role==="police"?"policial":null);const sp=spots[i%spots.length];p.home={x:sp[0]+randf(-.45,.45),y:sp[1]+randf(-.45,.45)};p.x=p.home.x;p.y=p.home.y;p.tx=p.x;p.ty=p.y;a.push(p)}return a}
+function mkParcel(pid,x,y,owner=null,owned=false){return{id:pid,x,y,owner,owned,price:C.LAND_PRICE,rentCost:C.RENT_PRICE,rentUntil:null,cells:Array.from({length:9},()=>null)}}
+function npcById(id){return S?S.population.find(p=>p.id===id)||null:null}
+function newCampaign(){const pop=createPopulation(),g=pop.find(x=>x.role==="governor");const rich=pop.filter(p=>p.role==="ordinary").sort((a,b)=>b.wealth-a.wealth)[0];S={version:C.VERSION,day:0,hour:8,minute:0,age:C.START_AGE,maxAge:rand(65,95),money:C.START_MONEY,energy:C.ENERGY,reputation:50,bank:0,chickens:0,inventory:{wheatSeeds:C.START_SEEDS,mangoSaplings:C.START_SAPLING,wheat:0,mango:0,fish:0,eggs:0},stats:{wheatHarvested:0,mangoHarvested:0,harvests:0,elections:0,years:0,fishCaught:0,conflictsSolved:0,invasions:0,thefts:0,projects:0},player:{id:"player",x:9.5,y:16.5,face:"down",step:0},population:pop,governorId:g.id,parcels:[mkParcel("p1",7,18,"player",true),mkParcel("p2",25,17,rich.id,true),mkParcel("p3",30,8),mkParcel("p4",13,5),mkParcel("p5",3,12),mkParcel("p6",24,3),mkParcel("p7",14,22)],market:{supply:{wheat:18,mango:12},lastPrice:{wheat:C.WHEAT_PRICE,mango:C.MANGO_PRICE}},events:[],recent:[],ledger:[],elections:[],governorHistory:[{id:g.id,name:g.name,A:g.A,O:g.O,startDay:0,endDay:null}],nextElection:C.ELECTION_EVERY,candidates:null,playerVote:null,endorsedFor:null,votedDay:null,permit:false,workedDay:-1,elapsed:0,ended:false,paused:false,feuds:[],projects:{well:{key:"well",label:"Poço comunitário",cost:350,raised:0,done:false,desc:"Rega coletiva: +10% de crescimento em todas as lavouras."},road:{key:"road",label:"Estrada vigiada",cost:300,raised:0,done:false,desc:"Patrulha na estrada: metade do risco de furto nos terrenos."},granary:{key:"granary",label:"Celeiro da vila",cost:300,raised:0,done:false,desc:"Estoque coletivo: mercado mais estável e tempestades menos danosas."},school:{key:"school",label:"Escola nova",cost:450,raised:0,done:false,desc:"Satisfação e renda dos habitantes sobem com o tempo."}},weather:"Céu aberto",talkedDay:{},lastMediateDay:-1,hints:{firstPlant:false,firstHarvest:false,firstVote:false}};event("Vida nova","A campanha começa na Vila do Ipê. Você chega aos 19 anos, com uma casa modesta, um pequeno terreno e seis sementes de trigo.");save();startGame();toast("Uma nova vida começa na Vila do Ipê. Abra “Como jogar” quando quiser.")}
+function gov(){return S?S.population.find(p=>p.id===S.governorId)||null:null}
+function event(type,text,important=true){if(!S)return;const e={day:S.day,type,text};S.events.push(e);if(S.events.length>C.MAX_EVENTS)S.events.shift();S.recent.unshift(e);S.recent=S.recent.slice(0,6);renderFeed();if(important)save()}
+function ledger(label,amount){if(!S)return;S.ledger.unshift({day:S.day,label,amount});S.ledger=S.ledger.slice(0,180);event("Economia",`${label}: ${amount>=0?"+":"−"}${money(Math.abs(amount))}.`,false)}
+function toast(text){const t=el("toast");if(!t)return;t.textContent=text;t.classList.add("show");clearTimeout(toaster);toaster=setTimeout(()=>t.classList.remove("show"),3200)}
+function save(){if(!S||!HASLS)return;try{localStorage.setItem(C.SAVE,JSON.stringify(S))}catch(e){if(DOM)toast("Não foi possível salvar. Verifique o espaço disponível no navegador.")}}
+function load(){if(!HASLS){showMenuMessage("Não há uma campanha salva para continuar.");return false}let raw=null;try{raw=localStorage.getItem(C.SAVE)}catch(e){}
+if(!raw){showMenuMessage("Não há uma campanha salva para continuar.");return false}
+try{const data=JSON.parse(raw);if(data.version!==C.VERSION||!Array.isArray(data.population)||data.population.length!==C.POP||!data.player||!Array.isArray(data.parcels)||!data.inventory)throw new Error("formato incompatível");
+S=data;S.paused=false;S.ended=!!S.ended;if(!Array.isArray(S.recent))S.recent=[];if(!Array.isArray(S.events))S.events=[];if(!Array.isArray(S.ledger))S.ledger=[];if(!Array.isArray(S.feuds))S.feuds=[];if(!S.projects)S.projects={};if(!S.talkedDay)S.talkedDay={};if(!S.hints)S.hints={};const msg=el("menuMessage");if(msg)msg.hidden=true;
+if(S.ended)showEnding();else startGame();return true}
+catch(e){try{localStorage.removeItem(C.SAVE)}catch(e2){}refreshMenu();showMenuMessage("A campanha salva está em formato antigo ou corrompida. Ela foi removida; comece uma nova vida.");return false}}
+function showMenuMessage(text){const m=el("menuMessage");if(!m)return;m.textContent=text;m.hidden=false}
+function refreshMenu(){const btn=el("continueBtn");if(!btn)return;if(!HASLS){btn.style.display="none";return}let raw=null;try{raw=localStorage.getItem(C.SAVE)}catch(e){}
+if(!raw){btn.style.display="none";return}btn.style.display="block";try{const data=JSON.parse(raw);const y=Math.floor((data.day||0)/365)+1;btn.textContent=data.ended?`Ver relatório final — ano ${y}`:`Continuar campanha — ${fmtDate((data.day||0)%365)}, ano ${y}, ${data.age} anos`}catch(e){btn.textContent="Continuar campanha"}}
+function startGame(){if(!DOM)return;el("startScreen").classList.remove("show");el("endingScreen").classList.remove("show");el("gameUI").style.display="grid";modalKind=null;el("overlay").classList.remove("open");resize();updateUI();renderFeed();if(!raf)raf=requestAnimationFrame(loop)}
+/* ================= tempo ================= */
+function consumeTime(minutes){if(!S||S.ended)return;let t=S.hour*60+S.minute+minutes;
+while(t>=1440){t-=1440;advanceDays(1);if(S.ended)return;if(S.paused){S.hour=8;S.minute=0;updateUI();return}t+=8*60}
+S.hour=Math.floor(t/60);S.minute=t%60;updateUI()}
+function advanceDays(n){if(!S||S.ended)return;for(let d=0;d<n;d++){if(S.ended||S.paused)break;S.day++;S.elapsed++;dayTick();if(S.ended||S.paused)break}
+S.hour=8;S.minute=0;if(!S.ended&&!S.paused){save();updateUI()}}
+function rollWeather(){const s=seasonOf(S.day);const table={verao:[.55,.25,.10,.10],outono:[.45,.35,.08,.12],inverno:[.40,.35,.10,.15],primavera:[.50,.35,.07,.08]}[s];const r=Math.random();let acc=0,keys=["Céu aberto","Chuva leve","Tempestade","Seca"];for(let i=0;i<4;i++){acc+=table[i];if(r<acc){S.weather=keys[i];return}}S.weather=keys[0]}
+function growthMult(){const s=SEASONS[seasonOf(S.day)].mult,w=(WEATHERS[S.weather]||WEATHERS["Céu aberto"]).growth;let g=s*w;if(S.projects.well.done)g*=1.1;return g}
+function avgSatisfaction(){const list=S.population.filter(p=>p.role==="ordinary");return list.reduce((a,p)=>a+p.satisfaction,0)/Math.max(1,list.length)}
+function friendsCount(){return S.population.filter(p=>p.role!=="player"&&(p.rel||0)>=40).length}
+function theftRisk(){let r=.006+.03*(100-(gov()?.O||0))/200;r=clamp(r,.002,.036);if(S.projects.road.done)r*=.5;if(friendsCount()>=2)r*=.85;return r}
+function dayTick(){const pRec=S.population.find(p=>p.role==="player");if(pRec)pRec.age=S.age;
+if(S.day%365===0){S.age++;S.stats.years++;for(const p of S.population){if(p.role==="player")continue;p.age++;if(p.age>=p.maxAge)replaceNPC(p)}}
+if(S.day%7===0)rollWeather();
+const g=growthMult();
+for(const p of S.parcels){if(p.rentUntil!==null&&S.day>p.rentUntil){p.rentUntil=null;event("Contrato encerrado",`O aluguel do terreno ${p.id.toUpperCase()} venceu. Plantações existentes permanecem até a colheita; renove para plantar de novo.`,false)}
+for(const c of p.cells){if(c&&!c.ready){c.progress+=g;if(c.progress>=c.need){c.ready=true;c.yieldReady=c.illegal?rand(3,4):rand(3,5)}}}}
+if(S.weather==="Tempestade"){const gran=S.projects.granary.done?1.5:1;for(const p of S.parcels){if(p.cells.some(c=>c&&c.ready)&&chance(.18/gran)){const idx=p.cells.findIndex(c=>c&&c.ready);const c=p.cells[idx];if(c.crop==="wheat"){p.cells[idx]=null;event("Tempestade",`A chuva forte destruiu o trigo maduro no terreno ${p.id.toUpperCase()}.`,p.owner==="player")}else{c.yieldReady=Math.max(1,(c.yieldReady||1)-1);event("Tempestade",`Galhos arrancados pela tempestade reduziram a safra de manga no terreno ${p.id.toUpperCase()}.`,false)}}}}
+const driftW=S.projects.granary.done?.997:.992,driftM=S.projects.granary.done?.995:.988,drought=S.weather==="Seca"?.995:1;
+S.market.supply.wheat=Math.max(8,S.market.supply.wheat*driftW*drought);S.market.supply.mango=Math.max(5,S.market.supply.mango*driftM*drought);
+const risk=theftRisk();for(const parcel of S.parcels){const exposed=parcel.owned&&parcel.owner==="player"||parcel.owner&&parcel.owner!=="player"||parcelActive(parcel);if(exposed&&parcel.cells.some(c=>c&&c.ready&&(c.yieldReady||0)>1)&&chance(risk)){const c=parcel.cells.find(c=>c&&c.ready&&(c.yieldReady||0)>1);if(c){c.yieldReady--;S.stats.thefts++;event("Furto na lavoura",`Levaram uma unidade da produção pronta no terreno ${parcel.id.toUpperCase()}.`,parcel.owner==="player")}}}
+if(S.chickens>0){let eggs=0;for(let i=0;i<S.chickens;i++)if(chance(.55))eggs++;if(eggs>0){S.inventory.eggs+=eggs;event("Galinheiro",`Suas galinhas puseram ${eggs} ovo(s).`,false)}}
+invasionAttempt();
+const p2=S.parcels.find(p=>p.owner&&p.owner!=="player");
+if(p2&&(gov()?.O||0)>=25){p2.cells.forEach((c,i)=>{if(c&&c.illegal&&c.removalAt!==undefined&&S.day>=c.removalAt){p2.cells[i]=null;event("Ordem restaurada",`A polícia removeu a plantação irregular do sítio de ${escapeHTML((npcById(p2.owner)||{}).name||"um vizinho")}.`,false)}})}
+if(S.day%7===0)feudAttempt();
+for(let i=S.feuds.length-1;i>=0;i--){const f=S.feuds[i];const a=npcById(f.a),b=npcById(f.b);if(!a||!b){S.feuds.splice(i,1);continue}a.satisfaction=clamp(a.satisfaction-.15,0,100);b.satisfaction=clamp(b.satisfaction-.15,0,100);if(S.day%7===0&&chance(.4)){S.feuds.splice(i,1);event("Reconciliação",`${a.name} e ${b.name} fizeram as pases depois de ${f.reason}.`,false)}}
+for(const key in S.projects){const pr=S.projects[key];if(!pr.done){let donations=0;for(let i=0;i<10;i++){const p=choice(S.population);if(p.role==="player")continue;donations+=clamp(p.wealth*.002*(p.satisfaction/60),.02,1.2)}if(S.projects.school.done)donations*=1.3;pr.raised+=donations;checkProject(pr)}}
+if(S.day%15===0)updateSatisfaction();
+if(S.day%30===0){S.bank=Math.round(S.bank*1.01*100)/100;if(avgSatisfaction()<35)event("Protesto","Houve protesto na praça contra o governo atual. A insatisfação anda alta.",false)}
+if(S.day%90===0){const prices=marketPrice("wheat");if(Math.abs(prices-S.market.lastPrice.wheat)>.8){event("Mercado",`A oferta local alterou o preço do trigo para ${money(prices)} por unidade.`,false);S.market.lastPrice.wheat=prices}}
+if(S.age>=S.maxAge){endCampaign();return}
+if(S.day>=S.nextElection){runElection();return}
+if(!S.candidates&&S.day>=S.nextElection-C.CAMPAIGN_DAYS){S.candidates=makeCandidates();const namesL=S.candidates.map(c=>escapeHTML(c.name)).join(", ");event("Campanha eleitoral",`A eleição se aproxima. Candidaturas anunciadas: ${namesL}. Vote na prefeitura nos últimos ${C.VOTE_WINDOW} dias.`)}
+updateUI()}
+function checkProject(pr){if(!pr.done&&pr.raised>=pr.cost){pr.done=true;S.stats.projects++;addRep(5);event("Obra concluída",`A vila inaugurou: ${pr.label}. ${pr.desc}`);toast(`Obra concluída: ${pr.label}!`)}}
+function replaceNPC(old){const idx=S.population.findIndex(p=>p.id===old.id);if(idx<0)return;if(old.id===S.governorId){const term=S.governorHistory.find(h=>h.id===old.id&&h.endDay===null);if(term)term.endDay=S.day;const acting=S.population.find(p=>p.id!==old.id&&p.role!=="police"&&p.role!=="player"&&p.id!==old.id);if(acting){acting.role="governor";acting.baseOccupation=acting.baseOccupation||acting.occupation;acting.occupation="governador interino";S.governorId=acting.id;S.governorHistory.push({id:acting.id,name:acting.name,A:acting.A,O:acting.O,startDay:S.day,endDay:null});event("Governo interino",`${acting.name} assume temporariamente até a próxima eleição.`)}S.candidates=null}
+const replacement=person(idp("n"),old.role==="police"?"police":"ordinary",old.role==="police"?"policial":null);replacement.home=old.home;replacement.x=old.x;replacement.y=old.y;replacement.tx=old.tx;replacement.ty=old.ty;S.population[idx]=replacement;
+for(let i=S.feuds.length-1;i>=0;i--){const f=S.feuds[i];if(f.a===old.id||f.b===old.id)S.feuds.splice(i,1)}
+if(S.candidates)S.candidates=S.candidates.filter(c=>c.id!==old.id);
+event("Nova moradora",`${replacement.name}, ${replacement.occupation}, chegou à vila para manter a comunidade com 50 habitantes.`,false)}
+/* ================= economia & políticas ================= */
+function taxRate(){return .02+.16*((gov()?.O||0)+100)/200}
+function policyCrop(crop){const A=gov()?.A||0;if(!A)return 1;const favored=(A<0&&crop==="wheat")||(A>0&&crop==="mango");return favored?1+.35*Math.abs(A)/100:1-.30*Math.abs(A)/100}
+function seedPrice(crop){const A=gov()?.A||0,base=crop==="wheat"?C.WHEAT_SEED:C.MANGO_SAPLING;const favored=(A<0&&crop==="wheat")||(A>0&&crop==="mango");return(favored&&Math.abs(A)>30)?base*.8:base}
+function marketPrice(crop){const base=crop==="wheat"?C.WHEAT_PRICE:C.MANGO_PRICE,supply=S.market.supply[crop],mult=clamp(1-(supply-18)/120,.65,1.35);return Math.max(.1,base*mult*(S.weather==="Seca"?1.1:1))}
+function effectivePrice(crop){return marketPrice(crop)*policyCrop(crop)*(1-taxRate())}
+function saleUnit(crop){return effectivePrice(crop)*(1+(S.reputation-50)/1000)}
+function moneyChange(delta,label){S.money=Math.round((S.money+delta)*100)/100;ledger(label,delta)}
+function addRep(n){S.reputation=clamp(S.reputation+n,0,100)}
+function repTitle(){const r=S.reputation;return r<20?"Forasteiro":r<40?"Morador":r<60?"Bom vizinho":r<80?"Pessoa estimada":"Personalidade da vila"}
+function parcelActive(p){return(p.owned&&p.owner==="player")||(p.rentUntil!==null&&p.rentUntil>=S.day)}
+function operatedCount(){return S.parcels.filter(parcelActive).length}
+function canOperate(p){if(!parcelActive(p))return false;if((gov()?.O||0)<50||S.permit)return true;const actives=S.parcels.filter(parcelActive).sort((a,b)=>a.id.localeCompare(b.id));return actives.indexOf(p)<2}
+function permitCost(){return Math.round(C.PERMIT_BASE+Math.max(0,(gov()?.O||0)-50)*.7)}
+/* ================= ações ================= */
+function requireEnergy(amount){if(S.energy<amount){toast("Você está sem energia. Descanse em casa ou coma algo antes.");return false}return true}
+function consumeEnergy(n){S.energy=clamp(S.energy-n,0,100)}
+function plant(p,i,crop){if(!parcelActive(p)){toast("Este terreno não está disponível para cultivo.");return}if(!canOperate(p)){toast("Com o governo atual, é preciso licença de expansão para operar mais de dois terrenos.");return}if(!requireEnergy(8))return;const seed=crop==="wheat"?"wheatSeeds":"mangoSaplings";if((S.inventory[seed]||0)<1){toast(crop==="wheat"?"Você não tem sementes de trigo.":"Você não tem muda de mangueira.");return}if(p.cells[i]){toast("Esta célula já tem uma planta.");return}S.inventory[seed]--;p.cells[i]={crop,planted:S.day,progress:0,need:crop==="wheat"?C.WHEAT_GROW:C.MANGO_GROW,ready:false,harvests:0,yieldReady:null,illegal:false,invader:null};consumeEnergy(8);event("Plantio",crop==="wheat"?"Você plantou trigo.":"Você plantou uma mangueira.");consumeTime(30);if(!S.hints.firstPlant){S.hints.firstPlant=true;toast("Dica: trigo amadurece em 7 dias; chuva acelera o crescimento, seca atrasa.")}save();updateUI()}
+function harvest(p,i){const cell=p.cells[i];if(!cell||!cell.ready){toast("Ainda não está no ponto de colheita.");return}if(!requireEnergy(6))return;const amount=cell.yieldReady||rand(3,5),item=cell.crop;S.inventory[item]+=amount;S.stats[item==="wheat"?"wheatHarvested":"mangoHarvested"]+=amount;S.stats.harvests++;consumeEnergy(6);const inv=cell.illegal?npcById(cell.invader):null;if(cell.illegal&&inv){inv.rel=clamp((inv.rel||0)-8,-100,100);event("Colheita irregular",`Você colheu o trigo que ${inv.name} plantou às escondidas no seu terreno. Ele não gostou.`)}else event("Colheita",`Você colheu ${amount} ${item==="wheat"?"unidades de trigo":"mangas"}.`);if(item==="wheat")p.cells[i]=null;else{cell.ready=false;cell.progress=0;cell.harvests++;cell.yieldReady=null}S.market.supply[item]=Math.max(0,S.market.supply[item]-Math.ceil(amount*.3));consumeTime(45);if(!S.hints.firstHarvest){S.hints.firstHarvest=true;toast("Dica: venda no mercado ou coma em casa para recuperar energia.")}save();updateUI()}
+function harvestAll(pid){const p=S.parcels.find(x=>x.id===pid);if(!p)return;let count=0,energy=0;for(let i=0;i<9;i++){const c=p.cells[i];if(c&&c.ready){if(!requireEnergy(6))break;harvest(p,i);count++;if(S.paused)return}}if(count===0)toast("Nada pronto para colher neste terreno.");renderPanel("Agricultura")}
+function removeIllegal(p,i){const cell=p.cells[i];if(!cell||!cell.illegal)return;if(!requireEnergy(10))return;const inv=npcById(cell.invader);if(inv){inv.rel=clamp((inv.rel||0)-12,-100,100);inv.invaderCooldownUntil=S.day+30}p.cells[i]=null;consumeEnergy(10);addRep(1);S.stats.invasions++;if((gov()?.O||0)>=50&&chance(.4)){moneyChange(8,"Multa paga pelo invasor");toast("A prefeitura multou o invasor: você recebeu uma compensação.")}event("Ocupação removida",`Você arrancou a plantação irregular do terreno ${p.id.toUpperCase()}. ${inv?inv.name+" ficou furioso.":""}`);consumeTime(30);save();updateUI();renderPanel("Agricultura")}
+function reportIllegal(p,i){const cell=p.cells[i];if(!cell||!cell.illegal)return;const inv=npcById(cell.invader);if(inv){inv.rel=clamp((inv.rel||0)-18,-100,100);inv.invaderCooldownUntil=S.day+30}consumeTime(60);if((gov()?.O||0)>=50){p.cells[i]=null;moneyChange(8,"Indenização por ocupação");addRep(1);S.stats.invasions++;event("Polícia agiu",`A delegacia removeu a plantação de ${inv?inv.name:"um invasor"} no terreno ${p.id.toUpperCase()} e cobrou indenização.`)}else{event("Boletim registrado",`A delegacia registrou a queixa sobre o terreno ${p.id.toUpperCase()}, mas sob este governo não há recursos para agir.`,false);toast("A polícia não pode agir com um governo tão pouco afeito à ordem.")}save();updateUI();renderPanel("Agricultura")}
+function friendRemove(p,i){const cell=p.cells[i];if(!cell||!cell.illegal)return;const friend=S.population.filter(n=>n.role!=="player"&&n.role!=="police"&&(n.rel||0)>=40&&n.id!==cell.invader).sort((a,b)=>(b.rel||0)-(a.rel||0))[0];if(!friend){toast("Você ainda não tem um amigo chegado o bastante para ajudar nisso.");return}const inv=npcById(cell.invader);p.cells[i]=null;friend.rel=clamp((friend.rel||0)+3,-100,100);if(inv){inv.rel=clamp((inv.rel||0)-3,-100,100);inv.invaderCooldownUntil=S.day+30}S.stats.invasions++;consumeTime(30);event("Ajuda de amigo",`${friend.name} conversou com ${inv?inv.name:"o invasor"} e a plantação irregular do terreno ${p.id.toUpperCase()} foi retirada sem alarde.`);save();updateUI();renderPanel("Agricultura")}
+function rentOrBuy(pid,kind){const p=S.parcels.find(x=>x.id===pid);if(!p){toast("Terreno não encontrado.");return}if(kind==="buy"){if(p.owned&&p.owner==="player"){toast("Este terreno já é seu.");return}if(S.money+0.001<p.price){toast("Dinheiro insuficiente para comprar este terreno.");return}moneyChange(-p.price,`Compra do terreno ${p.id.toUpperCase()}`);p.owned=true;p.owner="player";event("Terreno comprado",`Você comprou o terreno ${p.id.toUpperCase()} por ${money(p.price)}.`)}else{if(S.money+0.001<p.rentCost){toast("Dinheiro insuficiente para pagar o aluguel.");return}moneyChange(-p.rentCost,`Aluguel do terreno ${p.id.toUpperCase()}`);p.rentUntil=S.day+C.RENT_DAYS;event("Terreno alugado",`Você renovou o direito de cultivo do ${p.id.toUpperCase()} por 90 dias.`)}consumeTime(60);save();updateUI();renderPanel("Agricultura")}
+function buyItem(item,qty){const seed=item==="wheat"?"wheatSeeds":"mangoSaplings",unit=seedPrice(item),cost=unit*qty;if(qty<1||S.money+0.001<cost){toast("Dinheiro insuficiente.");return}moneyChange(-cost,`Compra de ${item==="wheat"?"sementes de trigo":"mudas de manga"} (x${qty})`);S.inventory[seed]+=qty;consumeTime(20);save();updateUI();renderPanel("Mercado")}
+function buyChicken(){if(S.chickens>=C.MAX_CHICKENS){toast("Seu galinheiro já está cheio.");return}if(S.money+0.001<C.CHICKEN_PRICE){toast("Dinheiro insuficiente para uma galinha.");return}moneyChange(-C.CHICKEN_PRICE,"Compra de galinha");S.chickens++;event("Galinheiro",`Você comprou uma galinha. Ovos aparecem de manhã no galinheiro.`);consumeTime(20);save();updateUI();renderPanel("Mercado")}
+function unitPriceOf(item){if(item==="wheat")return saleUnit("wheat");if(item==="mango")return saleUnit("mango");if(item==="fish")return C.FISH_PRICE*(S.weather==="Seca"?1.15:1);if(item==="eggs")return C.EGG_PRICE;return 0}
+function sell(item,qty){const have=S.inventory[item]||0;if(qty<1||qty>have){toast("Quantidade inválida: confira o que há no seu inventário.");return}const unit=unitPriceOf(item),gross=Math.round(unit*qty*100)/100;S.inventory[item]-=qty;moneyChange(gross,`Venda de ${qty} ${item==="wheat"?"trigo":item==="mango"?"mangas":item==="fish"?"peixes":"ovos"} (imposto ${(taxRate()*100).toFixed(1)}%)`);if(item==="wheat"||item==="mango"){S.market.supply[item]+=qty*.42;S.market.lastPrice[item]=marketPrice(item)}consumeTime(20);save();updateUI();renderPanel("Mercado")}
+function work(){if(S.workedDay===S.day){toast("Você já trabalhou hoje. Volte amanhã.");return}if(!requireEnergy(25))return;S.workedDay=S.day;const wage=rand(16,26)+(S.reputation>=60?3:0);consumeEnergy(25);moneyChange(wage,"Turno de trabalho no mercado");consumeTime(240);toast(`Turno concluído: você recebeu ${money(wage)}.`);save();renderPanel("Mercado")}
+function eatItem(item){const map={wheat:18,mango:25,fish:30,eggs:12};if(!(S.inventory[item]>0)){toast("Você não tem isso para comer.");return}S.inventory[item]--;S.energy=clamp(S.energy+map[item],0,100);consumeTime(15);toast(item==="fish"?"Peixe assado na brasa: energia recuperada.":"Refeição simples e honesta: energia recuperada.");save();updateUI();openModal("casa")}
+function sleepHome(){if(S.hour>=8){advanceDays(1)}else{S.hour=8;S.minute=0;updateUI()}S.energy=clamp(S.energy+40,0,100);toast("Você dormiu até de manhã.");save();openModal("casa")}
+function napHome(){consumeTime(120);S.energy=clamp(S.energy+18,0,100);toast("Uma soneca caiu bem.");save();openModal("casa")}
+function goFish(){if(!requireEnergy(12))return;consumeEnergy(12);const season=seasonOf(S.day);let n=rand(0,2)+(S.weather==="Chuva leve"?1:0)+((season==="verao"||season==="primavera")?1:0)-(season==="inverno"?1:0);n=clamp(n,0,4);S.inventory.fish+=n;S.stats.fishCaught+=n;consumeTime(90);toast(n>0?`Você pescou ${n} peixe(s).`:"Nem uma mordida hoje. O rio reserve.");event("Pesca",n>0?`Pescaria no rio rendeu ${n} peixe(s).`:"A pescaria de hoje não rendeu nada.",false);save();updateUI()}
+function bankOp(kind,amt){if(kind==="deposit"){amt=Math.min(amt,S.money);if(amt<0.01){toast("Você não tem esse dinheiro para guardar.");return}moneyChange(-amt,"Depósito no cofre da vila");S.bank=Math.round((S.bank+amt)*100)/100}else{amt=Math.min(amt,S.bank);if(amt<0.01){toast("Você não tem esse saldo guardado.");return}S.bank=Math.round((S.bank-amt)*100)/100;moneyChange(amt,"Saque do cofre da vila")}save();updateUI();renderPrefeitura()}
+function donateProject(key,amt){const pr=S.projects[key];if(!pr||pr.done)return;amt=Math.min(amt,S.money);if(amt<1){toast("Doação mínima de $1,00.");return}moneyChange(-amt,`Doação: ${pr.label}`);pr.raised+=amt;addRep(1);consumeTime(15);checkProject(pr);save();updateUI();renderPrefeitura()}
+function buyPermit(){if(S.permit){toast("Você já tem a licença de expansão.");return}const cost=permitCost();if(S.money+0.001<cost){toast("Dinheiro insuficiente para a licença.");return}moneyChange(-cost,"Licença de expansão agrícola");S.permit=true;event("Alvará",`Você obteve a licença de expansão por ${money(cost)}. Agora pode operar mais de dois terrenos.`);consumeTime(30);save();updateUI();renderPrefeitura()}
+function castVote(cid){if(S.day<S.nextElection-C.VOTE_WINDOW){toast("A urna só abre nos últimos "+C.VOTE_WINDOW+" dias antes da eleição.");return}if(S.playerVote){toast("Você já votou nesta eleição.");return}const cands=validCandidates();if(!cands.some(c=>c.id===cid)){toast("Candidatura inválida.");return}S.playerVote=cid;S.votedDay=S.day;S.hints.firstVote=true;consumeTime(15);event("Voto","Você depositou seu voto na urna da prefeitura. Ele vale tanto quanto qualquer outro.");save();updateUI();openModal("cédula")}
+function endorse(cid){if(S.endorsedFor){toast("Você já declarou apoio nesta campanha.");return}if(S.day<S.nextElection-C.ENDORSE_DAYS){toast("O período de apoio público ainda não abriu.");return}if(!requireEnergy(15))return;const cands=validCandidates();if(!cands.some(c=>c.id===cid))return;consumeEnergy(15);S.endorsedFor=cid;consumeTime(90);const c=cands.find(c=>c.id===cid);event("Apoio público",`Você subiu no banco da praça e declarou apoio a ${c.name}. Vizinhos que estimam você podem seguir sua palavra.`);save();updateUI();renderPanel("Governo")}
+/* ================= eleições ================= */
+function makeCandidates(){const cands=[];const current=gov();if(current)cands.push({id:current.id,name:current.name,occupation:current.baseOccupation||current.occupation,A:current.A,O:current.O,incumbent:true});const pool=S.population.filter(p=>p.role==="ordinary"&&p.id!==S.governorId).sort(()=>Math.random()-.5);while(cands.length<3&&pool.length){const p=pool.pop();let A=rand(-95,95),O=rand(-95,95);if(cands.some(c=>Math.abs(c.A-A)+Math.abs(c.O-O)<65)){A=clamp(A+(A<0?-35:35),-100,100);O=clamp(O+(O<0?30:-30),-100,100)}cands.push({id:p.id,name:p.name,occupation:p.baseOccupation||p.occupation,A,O,incumbent:false})}return cands}
+function campaignLine(c){const a=c.A<-25?"prioridade à lavoura de trigo":c.A>25?"incentivos aos pomares de manga":"equilíbrio entre as culturas";const o=c.O<-25?"menos exigências e mais autonomia":c.O>25?"regras claras e mais segurança":"uma administração moderada";return `Defende ${a} e ${o}.`}
+function validCandidates(){let cands=(S.candidates||makeCandidates()).filter(c=>npcById(c.id));const g=gov();if(g&&!cands.some(c=>c.id===g.id))cands.unshift({id:g.id,name:g.name,occupation:g.baseOccupation||g.occupation,A:g.A,O:g.O,incumbent:true});if(cands.length<3){const pool=S.population.filter(p=>p.role==="ordinary"&&!cands.some(c=>c.id===p.id)).sort(()=>Math.random()-.5);while(cands.length<3&&pool.length){const p=pool.pop();cands.push({id:p.id,name:p.name,occupation:p.baseOccupation||p.occupation,A:p.A,O:p.O,incumbent:false})}}return cands}
+function runElection(){const cands=validCandidates();if(!cands.length)return;for(const c of cands)c.votes=0;const voters=S.population.filter(p=>p.role!=="player");for(const voter of voters){const scores=cands.map(c=>{const ideology=-(Math.abs(voter.A-c.A)+Math.abs(voter.O-c.O))*.45;const satisfaction=c.incumbent?(voter.satisfaction-50)*.20:0;const job=(voter.occupation.includes("agricult")&&((voter.A<0&&c.A<0)||(voter.A>0&&c.A>0))?6:0)+(voter.occupation.includes("vend")&&c.O>20?4:0);const endorsed=(S.endorsedFor===c.id&&(voter.rel||0)>=20)?(voter.rel||0)*.30+S.reputation*.05:0;return{c,score:ideology+satisfaction+job+endorsed+randf(-7,7)}}).sort((a,b)=>b.score-a.score);scores[0].c.votes++}
+if(S.playerVote){const mine=cands.find(c=>c.id===S.playerVote);if(mine)mine.votes++}
+cands.sort((a,b)=>b.votes-a.votes||Math.random()-.5);const winner=cands[0],total=cands.reduce((a,c)=>a+(c.votes||0),0);
+S.elections.push({day:S.day,candidates:cands.map(({id,name,occupation,A,O,votes})=>({id,name,occupation,A,O,votes})),winnerId:winner.id,winnerName:winner.name,total,playerVoted:S.playerVote||null});S.stats.elections++;
+const old=gov();if(old){old.role="ordinary";old.occupation=old.baseOccupation||"morador"}
+const newGov=npcById(winner.id);if(newGov){newGov.role="governor";newGov.baseOccupation=newGov.baseOccupation||newGov.occupation;newGov.occupation="governador";newGov.A=winner.A;newGov.O=winner.O;S.governorId=newGov.id}
+const hist=S.governorHistory.find(h=>h.id===(old&&old.id)&&h.endDay===null);if(hist)hist.endDay=S.day;S.governorHistory.push({id:winner.id,name:winner.name,A:winner.A,O:winner.O,startDay:S.day,endDay:null});
+S.nextElection+=C.ELECTION_EVERY;const didVote=!!S.playerVote;S.candidates=null;S.playerVote=null;S.endorsedFor=null;S.votedDay=null;S.paused=true;
+event("Eleição",`${winner.name} venceu com ${winner.votes} de ${total} votos.${didVote?` Seu voto foi registrado.`:" Você não votou desta vez."}`);save();updateUI();openModal("eleicao",{winner,candidates:cands,total,playerVoted:S.elections[S.elections.length-1].playerVoted})}
+/* ================= invasões & rixas ================= */
+function invasionAttempt(){const playerParcels=S.parcels.filter(parcelActive);const others=S.parcels.filter(p=>!parcelActive(p));const parcel=(playerParcels.length&&chance(.55))?choice(playerParcels):choice(others.length?others:S.parcels);if(!parcel)return;if(parcel.cells.filter(c=>c&&c.illegal).length>=2)return;const free=[];parcel.cells.forEach((c,i)=>{if(!c)free.push(i)});if(!free.length)return;const risk=clamp(.10*(60-(gov()?.O||0))/160,.003,.10);if(!chance(risk))return;let pool=S.population.filter(n=>n.role==="ordinary"&&n.O<30&&S.day>=(n.invaderCooldownUntil||0));if(parcelActive(parcel))pool=pool.filter(n=>(n.rel||0)<20);if(!pool.length)return;const inv=pool.sort((a,b)=>(300-b.wealth)-(300-a.wealth))[rand(0,Math.min(2,pool.length-1))];const i=choice(free);parcel.cells[i]={crop:"wheat",planted:S.day,progress:0,need:C.WHEAT_GROW,ready:false,harvests:0,yieldReady:null,illegal:true,invader:inv.id};if(parcel.owner&&parcel.owner!=="player"){parcel.cells[i].removalAt=(gov()?.O||0)>=25?S.day+rand(3,6):undefined;const owner=npcById(parcel.owner);event("Ocupação no sítio",`${inv.name} foi visto plantando escondido no sítio de ${owner?owner.name:"um vizinho"}.`,false)}else if(parcelActive(parcel)){event("Ocupação irregular",`Vizinhos contaram: ${inv.name} plantou trigo às escondidas no seu terreno ${parcel.id.toUpperCase()}. Confronte a célula para decidir o que fazer.`,true)}else{event("Terra comum",`${inv.name} ocupou uma célula do terreno comum ${parcel.id.toUpperCase()}.`,false)}}
+function feudAttempt(){if(S.feuds.length>=2)return;if(!chance(.3))return;const pool=S.population.filter(n=>n.role==="ordinary"&&n.age>18);if(pool.length<2)return;const a=choice(pool);const partners=pool.filter(b=>b.id!==a.id&&!S.feuds.some(f=>f.a===b.id||f.b===b.id)&&(Math.abs(b.A-a.A)>60||Math.abs(b.O-a.O)>60));if(!partners.length)return;const b=choice(partners);const reason=choice(FEUD_REASONS);S.feuds.push({a:a.id,b:b.id,start:S.day,reason});event("Desentendimento",`${a.name} e ${b.name} pararam de se falar por causa de ${reason}. Quem sabe alguém consiga mediar a paz.`,false)}
+function feudOf(npc){return S.feuds.find(f=>(f.a===npc.id||f.b===npc.id))||null}
+function tryMediate(npc){const feud=feudOf(npc);if(!feud)return;if(S.lastMediateDay===S.day){toast("Você já tentou mediar hoje. Deixe os ânimos assentarem.");return}S.lastMediateDay=S.day;const other=npcById(feud.a===npc.id?feud.b:feud.a);if(!other)return;const relA=relOf(npc),relB=relOf(other);consumeTime(30);if(chance(.3+(relA+relB)/200+S.reputation/300)){S.feuds=S.feuds.filter(f=>f!==feud);npc.rel=clamp(relA+10,-100,100);other.rel=clamp(relB+10,-100,100);addRep(3);S.stats.conflictsSolved++;event("Paz na vila",`Com sua mediação, ${npc.name} e ${other.name} apertaram as mãos depois da briga por ${feud.reason}.`);toast("As pazes foram feitas. A vila agradece.")}else{event("Mediação adiantada",`Sua tentativa de aproximar ${npc.name} e ${other.name} não funcionou desta vez. Volte com mais confiança de ambos.`,false);toast("Eles ainda estão encolerizados. Tente outro dia.")}save();updateUI();closeModal()}
+function updateSatisfaction(){const g=gov();if(!g)return;const tax=taxRate(),w=effectivePrice("wheat"),m=effectivePrice("mango");for(const p of S.population){if(p.id===S.governorId||p.role==="police"||p.role==="player")continue;let income=p.occupation.includes("agricult")?(w>C.WHEAT_PRICE*.85?2:-2):p.occupation.includes("vend")?(tax<.10?1:-1):0;let orderBenefit=p.O>30&&g.O>0?1:g.O<-30&&p.O<0?1:-.5;let drift=S.projects.school.done?.4:0;p.satisfaction=clamp(p.satisfaction+(income+orderBenefit+drift+rand(-2,2))*.12,0,100);p.wealth=Math.max(0,p.wealth+rand(-3,5)+(S.projects.school.done?1:0))}}
+/* ================= diálogo ================= */
+function relOf(n){return clamp(n.rel||0,-100,100)}
+function tierOf(n){const r=relOf(n);return r>=40?3:r>=10?2:r>=-30?1:0}
+const ENEMY_LINES=["Não falo com você. Passa bem.","Só não me atrapalha o dia, combinado?","Deixa minha cerca e minha paciência em paz.","Um dia você aprende a conviver. Ou não.","Suma da minha sombra."];
+function fillSlots(line,npc){const others=S.population.filter(p=>p.role!=="player"&&p.id!==npc.id);const other=others.length?choice(others):{name:"um vizinho"};const g=gov();const feud=feudOf(npc);const season=SEASONS[seasonOf(S.day)].label.toLowerCase();let out=line.replace(/\{nome\}/g,other.name).replace(/\{gov\}/g,g?g.name:"a prefeitura").replace(/\{cultura\}/g,g&&g.A<0?"trigo":"mangas").replace(/\{outra\}/g,g&&g.A<0?"mangas":"trigo").replace(/\{estacao\}/g,season).replace(/\{clima\}/g,S.weather.toLowerCase()).replace(/\{dias\}/g,String(Math.max(0,S.nextElection-S.day))).replace(/\{terreno\}/g,choice(S.parcels).id.toUpperCase()).replace(/\{motivo\}/g,feud?feud.reason:choice(FEUD_REASONS));return out}
+function jobLines(npc){const occ=npc.occupation;for(const key in TOPIC_JOB){if(occ.includes(key))return TOPIC_JOB[key]}return TOPIC_FARM}
+function pickTopic(npc){const g=gov();const tier=tierOf(npc);const season=seasonOf(S.day);const weighted=[];const add=(w,arr)=>{if(w>0&&arr&&arr.length)weighted.push({w,arr})};
+if(feudOf(npc))add(tier>=1?4:1,TOPIC_FEUD);
+if(S.weather==="Céu aberto")add(2,TOPIC_WEATHER_ABERTO);else if(S.weather==="Chuva leve")add(2,TOPIC_WEATHER_CHUVA);else if(S.weather==="Tempestade")add(2,TOPIC_WEATHER_TORMENTA);else add(2,TOPIC_WEATHER_SECA);
+const aligned=g?((npc.A*g.A>0&&Math.abs(npc.A-g.A)<70)||(npc.O*g.O>0&&Math.abs(npc.O-g.O)<70)):true;add(2.5,aligned?TOPIC_POL_ALIGNED:TOPIC_POL_OPPOSED);
+add(1.5,effectivePrice("wheat")>=C.WHEAT_PRICE*.95?TOPIC_MARKET_HI:TOPIC_MARKET_LO);
+add(1.2,TOPIC_FARM);add(2,jobLines(npc));add(1,TOPIC_TIP);
+add(npc.trait==="fofoqueiro"?3:1,TOPIC_GOSSIP);
+add(npc.age>=60?1.5:.7,TOPIC_MEMORY);
+add(1,TOPIC_TRAIT[npc.trait]||TOPIC_TRAIT["prático"]);
+if(S.parcels.some(p=>p.cells.some(c=>c&&c.illegal)))add(1.5,TOPIC_INVA);
+if(Object.values(S.projects).some(pr=>pr.done))add(.8,TOPIC_PROJECT);
+add(.6,TOPIC_RUMOR);
+let total=weighted.reduce((a,x)=>a+x.w,0),r=Math.random()*total;let picked=weighted[0];for(const x of weighted){r-=x.w;if(r<=0){picked=x;break}}
+return fillSlots(choice(picked.arr),npc)}
+function pickGreeting(npc){const tier=tierOf(npc);const pool=[GREET_COLD,GREET_NEUTRAL,GREET_WARM,GREET_FRIEND][tier];return fillSlots(choice(pool),npc)}
+function talkTo(id){const npc=npcById(id);if(!npc){toast("Esta pessoa não mora mais na vila.");return}let giftText=null;const tier=tierOf(npc);
+if((npc.lastTalk||-1)<S.day){let delta=2+(S.reputation>=60?1:0);if(tier===0&&chance(.5))delta=1;if(npc.trait==="animado")delta++;npc.rel=clamp(relOf(npc)+delta,-100,100);npc.lastTalk=S.day}
+if(tier===3&&chance(.10)){const item=chance(.85)?"wheatSeeds":"mangoSaplings";const qty=item==="wheatSeeds"?2:1;S.inventory[item]+=qty;giftText=`${choice(TOPIC_GIFT)} <b class="good">(+${qty} ${item==="wheatSeeds"?"sementes de trigo":"muda de mangueira"})</b>`;event("Presente de vizinho",`${npc.name} compartilhou sementes com você.`,false)}
+let line;if(relOf(npc)<=-60){line=choice(ENEMY_LINES)}else{line=pickGreeting(npc)+" "+pickTopic(npc)}
+const canMediate=!!feudOf(npc)&&relOf(npc)>=15;
+openModal("npc",{npc,line,giftText,canMediate});consumeTime(10);save();updateUI()}
+function giveGift(id,item){const npc=npcById(id);if(!npc)return;if(!(S.inventory[item]>0)){toast("Você não tem isso para dar.");return}S.inventory[item]--;npc.rel=clamp(relOf(npc)+5,-100,100);addRep(1);consumeTime(10);event("Presente",`Você deu ${item==="wheat"?"trigo":item==="mango"?"mangas":item==="fish"?"um peixe":"ovos"} para ${npc.name}.`,false);toast("A gente lembra de quem divide o que tem.");save();updateUI();talkTo(id)}
+/* ================= HUD & painéis ================= */
+function updateUI(){if(!S||!DOM)return;setDateUI();renderFeed();const hint=el("contextHint");if(hint){const n=getNearby();hint.textContent=n?n.hint:"Caminhe pela vila para explorar. WASD ou setas; E interage."}}
+function setDateUI(){if(!DOM)return;const y=Math.floor(S.day/365)+1,season=SEASONS[seasonOf(S.day)];const dl=el("dateLabel");if(dl)dl.innerHTML=`${fmtDate(S.day%365)}<small>Ano ${y} · ${pad2(S.hour)}:${pad2(S.minute)} · ${season.icon} ${season.label}</small>`;
+const wl=el("weatherLabel");if(wl)wl.textContent=`${(WEATHERS[S.weather]||WEATHERS["Céu aberto"]).icon} ${S.weather}`;
+const set=(id,v)=>{const n=el(id);if(n)n.textContent=v};set("ageStat",S.age+" anos");set("moneyStat",money(S.money));set("energyStat",Math.round(S.energy)+"%");set("repTitle",repTitle());set("repLabel","Renome · "+Math.round(S.reputation));
+const eb=el("energyBar");if(eb)eb.style.width=S.energy+"%";const rb=el("repBar");if(rb)rb.style.width=S.reputation+"%";const tb=el("repTitle");if(tb)tb.title=Math.round(S.reputation)+" de 100";
+const g=gov();if(g){set("govName",g.name);set("axisAValue",(g.A>0?"+":"")+g.A);set("axisOValue",(g.O>0?"+":"")+g.O);const a=el("axisA"),o=el("axisO");if(a)a.style.left=((g.A+100)/2)+"%";if(o)o.style.left=((g.O+100)/2)+"%";const pn=el("policyNote");if(pn)pn.innerHTML=`Imposto na venda: ${(taxRate()*100).toFixed(1)}% · política ×${policyCrop("wheat").toFixed(2)} trigo / ×${policyCrop("mango").toFixed(2)} manga${(g.O>=50&&!S.permit)?` · <b class="warning">licença exigida p/ 3+ terrenos (${money(permitCost())})</b>`:""}`}}
+const FEED_ICONS={"Vida nova":"🌱","Plantio":"🌾","Colheita":"🧺","Economia":"💰","Eleição":"🗳️","Campanha eleitoral":"📣","Voto":"✅","Apoio público":"📣","Furto na lavoura":"🕳️","Ocupação irregular":"🚨","Ocupação no sítio":"🚜","Terra comum":"🚜","Ocupação removida":"🧹","Polícia agiu":"👮","Boletim registrado":"📋","Ajuda de amigo":"🤝","Desentendimento":"💢","Reconciliação":"🕊️","Paz na vila":"🕊️","Mediação adiantada":"💬","Nova moradora":"🏡","Governo interino":"⚖️","Terreno comprado":"📜","Terreno alugado":"📜","Contrato encerrado":"⏳","Tempestade":"⛈️","Mercado":"📈","Protesto":"✊","Obra concluída":"🏗️","Galinheiro":"🐔","Pesca":"🎣","Presente":"🎁","Presente de vizinho":"🎁","Alvará":"📄","Fim de uma vida":"🕯️"};
+function renderFeed(){const f=el("feedItems");if(!f||!S)return;if(!S.recent.length){f.innerHTML="<p>A vila desperta para mais um dia.</p>";return}f.innerHTML=S.recent.map(e=>`<p><b>${FEED_ICONS[e.type]||"•"} ${fmtDate(e.day%365)} · ${escapeHTML(e.type)}</b><br>${escapeHTML(e.text)}</p>`).join("")}
+function alertsHtml(){if(!S)return"";let h="";const illegalMine=S.parcels.filter(p=>parcelActive(p)&&p.cells.some(c=>c&&c.illegal)).length;if(illegalMine>0)h+=`<div class="alert">🚨 <span><b>${illegalMine} ocupação(ões) irregular(es)</b> nos seus terrenos. Confronte a célula no mapa e decida: remover, denunciar, pedir ajuda ou colher.</span></div>`;
+const ready=S.parcels.filter(parcelActive).reduce((a,p)=>a+p.cells.filter(c=>c&&c.ready).length,0);if(ready>0)h+=`<div class="alert">🌾 <span><b>${ready} plantação(ões) prontas</b> para colheita. Colheita madura atrai furtos.</span></div>`;
+const daysToVote=S.nextElection-S.day;if(daysToVote<=C.VOTE_WINDOW&&S.day>=S.nextElection-C.CAMPAIGN_DAYS&&!S.playerVote)h+=`<div class="alert blue">🗳️ <span><b>Urna aberta!</b> A eleição é em ${daysToVote} dia(s). Vote na prefeitura — seu voto decide junto com os 49 vizinhos.</span></div>`;
+for(const p of S.parcels){if(parcelActive(p)&&p.rentUntil!==null&&p.rentUntil-S.day<=15)h+=`<div class="alert">⏳ <span>O aluguel do <b>${p.id.toUpperCase()}</b> vence em ${p.rentUntil-S.day} dia(s). Renove na aba Agricultura.</span></div>`}
+if(S.energy<25)h+=`<div class="alert">😴 <span><b>Energia baixa.</b> Durma em casa, faça uma soneca ou coma algo.</span></div>`;return h}
+function setTab(tab){if(!S)return;activeTab=tab;$$("[data-tab]").forEach(b=>b.classList.toggle("active",b.dataset.tab===tab));openModal("panel",{tab})}
+function renderPanel(tab){if(!S)return;const m=el("modal");if(!m)return;activeTab=tab;m.classList.remove("narrow");if(!el("overlay").classList.contains("open")){el("overlay").classList.add("open");modalKind="panel"}
+let html=head(tab,tab==="Resumo"?"Sua vida, seus recursos e o ritmo da comunidade.":"Informações atualizadas da campanha.");
+if(tab==="Resumo"){const crops=S.parcels.filter(parcelActive).flatMap(p=>p.cells.filter(Boolean));const inCampaign=S.day>=S.nextElection-C.CAMPAIGN_DAYS;
+html+=alertsHtml();
+html+=`<div class="grid3"><div class="tile"><span class="tag">Inventário</span><h3>${S.inventory.wheatSeeds} sementes · ${S.inventory.mangoSaplings} mudas</h3><p>${S.inventory.wheat} trigo · ${S.inventory.mango} mangas · ${S.inventory.fish} peixes · ${S.inventory.eggs} ovos</p></div>
+<div class="tile"><span class="tag">Situação</span><h3>${crops.length} plantas em cultivo</h3><p>${operatedCount()} terreno(s) em operação · ${S.chickens} galinha(s) · cofre: ${money(S.bank)}</p></div>
+<div class="tile"><span class="tag">Renome na vila</span><h3>${repTitle()}</h3><p>Mediar rixas, doar para obras e dividir comida aumentam sua fama — e fama abre portas.</p></div></div>
+<div class="tipbox"><b>Um plano possível:</b> plante trigo para colheita rápida e uma mangueira para renda recorrente. Galinhas e pesca estabilizam o dia a dia. Acompanhe o governo: quando a política muda, a cultura mais rentável muda junto.</div>
+<div class="row"><span>Próxima eleição</span><b>${inCampaign?`em ${S.nextElection-S.day} dia(s) — campanha em curso`:`${fmtDate(S.nextElection%365)}, ano ${Math.floor(S.nextElection/365)+1}`}</b></div>
+<div class="row"><span>Tempo vivido nesta campanha</span><b>${S.stats.years} ano(s) completo(s)</b></div>
+<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="action" data-action="save">Salvar campanha</button> <button class="action" data-action="wait">Avançar o tempo</button> <button class="action" data-action="help">Como jogar</button></div>`}
+else if(tab==="Agricultura"){const order=S.parcels.slice().sort((a,b)=>{const av=(a.owned&&a.owner==="player")?0:parcelActive(a)?1:2,bv=(b.owned&&b.owner==="player")?0:parcelActive(b)?1:2;return av-bv||a.id.localeCompare(b.id)});
+html+=`<div class="notice">Aproxime-se das células no mapa e pressione <span class="kbd">E</span> para plantar, colher ou confrontar ocupações. Terrenos alugados dão 90 dias de cultivo. Células <span class="pill red">vermelhas</span> são plantios irregulares de invasores.</div><div class="grid3">`;
+for(const p of order){const active=parcelActive(p),mine=p.owned&&p.owner==="player";const ownerN=p.owner&&p.owner!=="player"?npcById(p.owner):null;const status=mine?"Sua propriedade":active?`Alugado até o dia ${p.rentUntil}`:ownerN?`Sítio de ${escapeHTML(ownerN.name)}`:"Disponível";const readyN=p.cells.filter(c=>c&&c.ready).length;const illegalN=p.cells.filter(c=>c&&c.illegal).length;
+html+=`<div class="tile"><span class="tag">${status}</span><h3>Terreno ${p.id.toUpperCase()}</h3><div class="celldots">${p.cells.map(c=>!c?'<i class="celldot"></i>':c.illegal?'<i class="celldot illegal" title="Ocupação irregular"></i>':c.ready?'<i class="celldot ready" title="Pronto para colher"></i>':'<i class="celldot grow" title="Em crescimento"></i>').join("")}</div><p>${p.cells.filter(Boolean).length}/9 células ocupadas · ${readyN} pronta(s)${illegalN?` · <b class="warning">${illegalN} irregular(es)</b>`:""}</p>`;
+if(mine||active){if(readyN)html+=`<button class="action primary" data-action="harvest-all" data-p="${p.id}">Colher tudo pronto</button> `;if(p.rentUntil!==null&&p.rentUntil<=S.day+15)html+=`<button class="action gold" data-action="rent-parcel" data-p="${p.id}">Renovar aluguel (${money(C.RENT_PRICE)})</button>`}
+else if(!ownerN)html+=`<p>Compra ${money(p.price)} · aluguel ${money(p.rentCost)}/90 dias</p><button class="action primary" data-action="buy-parcel" data-p="${p.id}">Comprar</button> <button class="action" data-action="rent-parcel" data-p="${p.id}">Alugar</button>`;
+html+=`</div>`}
+html+=`</div><div class="tile" style="margin-top:12px"><h3>Seu inventário agrícola</h3><p>Sementes de trigo: ${S.inventory.wheatSeeds} · Mudas de manga: ${S.inventory.mangoSaplings}</p><p>Trigo colhido: ${S.inventory.wheat} · Mangas colhidas: ${S.inventory.mango} · Peixes: ${S.inventory.fish} · Ovos: ${S.inventory.eggs}</p><p class="muted">Crescimento hoje: ${SEASONS[seasonOf(S.day)].label} ×${SEASONS[seasonOf(S.day)].mult.toFixed(2)} · clima ${S.weather} ×${(WEATHERS[S.weather]||WEATHERS["Céu aberto"]).growth.toFixed(2)}${S.projects.well.done?" · poço +10%":""}</p></div>`}
+else if(tab==="Mercado"){html+=renderMarketTab()}
+else if(tab==="Vila"){const people=S.population.filter(p=>p.role!=="player").slice().sort((a,b)=>a.name.localeCompare(b.name));
+html+=`<div class="notice">A comunidade mantém exatamente 50 habitantes: você e 49 vizinhos. Converse diariamente — as amizades afetam rixas, votos, presentes e até os furtos nas suas terras. Não há medidor de relação: preste atenção no tom de cada um.</div><div class="scroll" style="margin-top:10px">`;
+for(const p of people){const feud=feudOf(p);html+=`<div class="row"><div style="min-width:0"><b>${escapeHTML(p.name)}</b><div class="muted">${escapeHTML(p.occupation)} · ${p.age} anos · ${p.trait}</div></div><span class="pill ${p.role==="governor"?"gold":p.role==="police"?"blue":feud?"red":""}">${p.role==="governor"?"Governador":p.role==="police"?"Polícia":feud?"Em rixa":"Vizinho"}</span><button class="action" data-action="talk" data-id="${p.id}">Conversar</button></div>`}
+html+=`</div>`}
+else if(tab==="Governo"){const g=gov(),cands=S.candidates||validCandidates();if(!S.candidates&&S.day>=S.nextElection-C.CAMPAIGN_DAYS)S.candidates=cands;const inCampaign=S.day>=S.nextElection-C.CAMPAIGN_DAYS;const voteOpen=S.day>=S.nextElection-C.VOTE_WINDOW;const endorseOpen=S.day>=S.nextElection-C.ENDORSE_DAYS;
+html+=`<div class="grid2"><div class="tile"><span class="tag">Mandato atual</span><h3>${escapeHTML(g?g.name:"—")}</h3><p>${escapeHTML(g?g.occupation:"")} · mandato iniciado no ano ${Math.floor(((S.governorHistory.find(h=>h.id===(g&&g.id))||{startDay:0}).startDay)/365)+1}.</p>
+<p>Imposto na venda: <b>${(taxRate()*100).toFixed(1)}%</b> · Risco de furto/dia: <b>${(theftRisk()*100).toFixed(2)}%</b> · Risco de ocupação: <b>${(clamp(.10*(60-g.O)/160,.003,.10)*100).toFixed(2)}%</b> por terreno comum.</p>
+<p>Sementes subsidiadas: <b>${g.A<-30?"trigo (−20%)":g.A>30?"manga (−20%)":"nenhuma"}</b> · Licença para 3+ terrenos: <b>${g.O>=50?`exigida (${money(permitCost())})`:"não exigida"}</b> · Polícia contra ocupações: <b>${g.O>=50?"age rápido e indeniza":g.O>=25?"age devagar":"não age"}</b></p></div>
+<div class="tile"><span class="tag">Satisfação média</span><h3>${Math.round(avgSatisfaction())}/100</h3><div class="vbar"><i style="width:${Math.round(avgSatisfaction())}%"></i></div><p>${avgSatisfaction()<35?"A insatisfação cresce — protestos na praça e risco de troca de governo.":"O humor da vila resiste às estações."}</p></div></div>
+<h3 style="font-size:17px;margin:18px 0 8px">Eleição ${inCampaign?`em ${S.nextElection-S.day} dia(s)`:`em ${fmtDate(S.nextElection%365)}, ano ${Math.floor(S.nextElection/365)+1}`}</h3>
+<p class="muted">Você é um eleitor entre 50. Os 49 vizinhos votam segundo ideologia, satisfação e conveniência — e sua palavra pública tem peso entre amigos.</p>`;
+if(inCampaign){html+=`<div class="grid3">`;for(const c of cands){html+=`<div class="tile"><span class="tag">${c.incumbent?"Governador atual":"Candidato(a)"}</span><h3>${escapeHTML(c.name)}</h3><p>${escapeHTML(c.occupation)}</p><p>Agricultura: ${c.A>0?"+":""}${c.A} · Liberdade/ordem: ${c.O>0?"+":""}${c.O}</p><p>${campaignLine(c)}</p>`;
+if(voteOpen&&!S.playerVote)html+=`<button class="action primary" data-action="vote" data-c="${c.id}">Votar em ${escapeHTML(c.name.split(" ")[0])}</button>`;
+if(endorseOpen&&!S.endorsedFor&&!c.incumbent||endorseOpen&&!S.endorsedFor)html+=`<button class="action gold" data-action="endorse" data-c="${c.id}">Apoiar publicamente</button>`;
+if(S.playerVote===c.id)html+=`<p class="good">✓ Seu voto está neste nome.</p>`;if(S.endorsedFor===c.id)html+=`<p class="good">✓ Você declarou apoio.</p>`;
+html+=`</div>`}html+=`</div>`;
+if(!voteOpen)html+=`<p class="muted">A urna abre na prefeitura nos últimos ${C.VOTE_WINDOW} dias${S.playerVote?"":""}.</p>`;if(S.playerVote)html+=`<p class="good">Você já votou nesta eleição.</p>`}
+else html+=`<p class="muted">As candidaturas são anunciadas ${C.CAMPAIGN_DAYS} dias antes da eleição.</p>`;
+html+=`<h3 style="font-size:17px;margin:18px 0 8px">Histórico de governos</h3>${S.governorHistory.slice().reverse().map(h=>`<div class="row"><span><b>${escapeHTML(h.name)}</b> · trigo ${h.A>0?"+":""}${h.A}, ordem ${h.O>0?"+":""}${h.O}</span><span>${fmtDate(h.startDay%365)}${h.endDay===null?" — atual":` – ${fmtDate(h.endDay%365)}`}</span></div>`).join("")}
+<h3 style="font-size:17px;margin:18px 0 8px">Eleições realizadas</h3>${S.elections.slice().reverse().slice(0,5).map(e=>`<div class="row"><span><b>${escapeHTML(e.winnerName)}</b> venceu</span><span>${e.total} votos · ano ${Math.floor(e.day/365)+1}</span></div>`).join("")||"<p class='muted'>Nenhuma eleição ainda. A primeira acontece no ano 5.</p>"}`}
+else if(tab==="Diário"){html+=`<div class="grid2"><div class="tile"><h3>Movimento financeiro</h3><div class="scroll ledger">${S.ledger.slice(0,60).map(x=>`<div class="row"><span>${fmtDate(x.day%365)} · ${escapeHTML(x.label)}</span><b class="${x.amount>=0?"good":"warning"}">${x.amount>=0?"+":"−"}${money(Math.abs(x.amount))}</b></div>`).join("")||"<p class='muted'>As transações aparecerão aqui.</p>"}</div></div><div class="tile"><h3>Memória da vila</h3><div class="scroll">${S.events.slice().reverse().slice(0,90).map(e=>`<div class="row"><span><b>${fmtDate(e.day%365)} · ${escapeHTML(e.type)}</b><br>${escapeHTML(e.text)}</span></div>`).join("")}</div></div>
+<div class="tile"><h3>Números de uma vida</h3><p>${S.stats.harvests} colheitas · ${S.stats.wheatHarvested} trigos · ${S.stats.mangoHarvested} mangas</p><p>${S.stats.fishCaught} peixes · ${S.stats.thefts} furtos sofridos · ${S.stats.invasions} ocupações resolvidas</p><p>${S.stats.conflictsSolved} rixas mediadas · ${S.stats.projects} obras concluídas · ${S.stats.elections} eleições</p></div></div>`}
+m.innerHTML=html;modalKind="panel"}
+function renderMarketTab(){const workDone=S.workedDay===S.day;
+return `<div class="grid2"><div class="tile"><span class="tag">Insumos e animais</span><h3>Sementes, mudas e galinhas</h3>
+<p>Trigo: <b>${money(seedPrice("wheat"))}</b>/semente (você tem ${S.inventory.wheatSeeds}) · Manga: <b>${money(seedPrice("mango"))}</b>/muda (você tem ${S.inventory.mangoSaplings})</p>
+<button class="action primary" data-action="buy" data-item="wheat" data-qty="1">Comprar 1 semente</button> <button class="action" data-action="buy" data-item="wheat" data-qty="5">Comprar 5</button> <button class="action" data-action="buy" data-item="mango" data-qty="1">Comprar muda</button>
+<p>Galinha: <b>${money(C.CHICKEN_PRICE)}</b> — põe ovos quase todo dia (máx. ${C.MAX_CHICKENS}). Você tem ${S.chickens}. Ovo sai por ${money(C.EGG_PRICE)}.</p>
+<button class="action" data-action="buy-chicken">Comprar galinha</button></div>
+<div class="tile"><span class="tag">Preço com política, imposto e fama</span><h3>Venda sua produção</h3>
+<p>Trigo: base ${money(C.WHEAT_PRICE)} · mercado ${money(marketPrice("wheat"))} · política ×${policyCrop("wheat").toFixed(2)} · <b>líquido ${money(saleUnit("wheat"))}/un.</b> (você tem ${S.inventory.wheat})</p>
+<p>Mangas: base ${money(C.MANGO_PRICE)} · mercado ${money(marketPrice("mango"))} · política ×${policyCrop("mango").toFixed(2)} · <b>líquido ${money(saleUnit("mango"))}/un.</b> (você tem ${S.inventory.mango})</p>
+<p>Peixe: <b>${money(unitPriceOf("fish"))}/un.</b> (você tem ${S.inventory.fish}) · Ovo: <b>${money(C.EGG_PRICE)}</b> (você tem ${S.inventory.eggs})</p>
+<p class="muted">Imposto atual: ${(taxRate()*100).toFixed(1)}% · bônus de renome: ${((S.reputation-50)/10).toFixed(1)}%</p>
+<button class="action primary" data-action="sell-all" data-item="wheat">Vender trigo</button> <button class="action primary" data-action="sell-all" data-item="mango">Vender mangas</button> <button class="action" data-action="sell-all" data-item="fish">Vender peixes</button> <button class="action" data-action="sell-all" data-item="eggs">Vender ovos</button>
+<div style="margin-top:10px"><label>Quantidade <input id="sellQty" type="number" min="1" value="1"></label> <button class="action" data-action="sell-selected" data-item="wheat">Vender trigo</button> <button class="action" data-action="sell-selected" data-item="mango">Vender mangas</button></div></div></div>
+<div class="tile" style="margin-top:12px"><h3>Trabalho no mercado</h3><p>Um turno paga entre ${money(16)} e ${money(26)}${S.reputation>=60?" (+$3 de bom renome)":""}, consome 25 de energia e quatro horas. Um turno por dia.</p><button class="action" data-action="work" ${workDone?"disabled":""}>${workDone?"Turno de hoje concluído":"Trabalhar um turno"}</button></div>`}
+/* ================= modais ================= */
+function openModal(kind,data={}){if(!DOM)return;modalKind=kind;const m=el("modal"),ov=el("overlay");if(!m||!ov)return;ov.classList.add("open");m.classList.toggle("narrow",["plant","npc","prefeitura","wait","help","controls","casa","rio","invasao","cedula","delegacia","confirm-new"].includes(kind));
+if(kind==="panel"){renderPanel(data.tab);return}
+if(kind==="plant"){const p=data.parcel,i=data.index;m.innerHTML=`${head("Plantio",`Célula ${i+1} do terreno ${p.id.toUpperCase()}`)}<div class="notice">Escolha a cultura. O plantio consome 8 de energia e 30 minutos. Chuva acelera o crescimento; seca atrasa.</div><div class="grid2" style="margin-top:12px">
+<div class="tile"><h3>🌾 Trigo</h3><p>${S.inventory.wheatSeeds} sementes disponíveis · amadurece em ~${Math.ceil(C.WHEAT_GROW/growthMult())} dias · semente ${money(seedPrice("wheat"))}</p><p>Colheita única de 3–5 unidades. Ciclo rápido.</p><button class="action primary" data-action="plant" data-crop="wheat" data-p="${p.id}" data-i="${i}">Plantar trigo</button></div>
+<div class="tile"><h3>🥭 Mangueira</h3><p>${S.inventory.mangoSaplings} mudas disponíveis · primeira safra em ~${Math.ceil(C.MANGO_GROW/growthMult())} dias · muda ${money(seedPrice("mango"))}</p><p>Depois frutifica a cada ~${C.MANGO_CYCLE} dias, para sempre.</p><button class="action primary" data-action="plant" data-crop="mango" data-p="${p.id}" data-i="${i}">Plantar mangueira</button></div></div>`}
+else if(kind==="invasao"){const p=S.parcels.find(x=>x.id===data.p),cell=p?p.cells[data.i]:null;if(!cell){closeModal();return}const inv=npcById(cell.invader);const ready=cell.ready;
+m.innerHTML=`${head("Ocupação irregular",`Célula ${data.i+1} do terreno ${p.id.toUpperCase()}`)}<div class="notice"><b>${inv?escapeHTML(inv.name):"Alguém"}</b> plantou trigo aqui às escondidas (${Math.max(0,S.day-cell.planted)} dia(s)). O que você faz com uma enxada e uma paciência limitada?</div>
+<div style="display:grid;gap:8px">
+${ready?`<button class="action primary" data-action="harvest-cell" data-p="${p.id}" data-i="${data.i}">Colher como sua (${cell.yieldReady||rand(3,5)} unidades — o invasor ficará ressentido)</button>`:`<p class="muted">A plantação ainda está crescendo. Quando amadurecer, você pode colhê-la.</p>`}
+<button class="action danger" data-action="remove-illegal" data-p="${p.id}" data-i="${data.i}">Arrancar você mesmo (10 energia · o invasor ficará furioso)</button>
+<button class="action" data-action="report-illegal" data-p="${p.id}" data-i="${data.i}">Denunciar na delegacia (1h · depende do governo: ${(gov()?.O||0)>=50?"polícia age e indeniza":(gov()?.O||0)>=25?"ação lenta":"sem recursos para agir"})</button>
+<button class="action gold" data-action="friend-remove" data-p="${p.id}" data-i="${data.i}">Pedir ajuda a um amigo chegado (mediação sem alarde)</button>
+</div>`}
+else if(kind==="npc"){const npc=data.npc;if(!npc){closeModal();return}const tier=tierOf(npc);const tierText=relOf(npc)<=-60?"A conversa é um muro.":tier===3?"Vocês conversam como velhos amigos.":tier===2?"A conversa flui com simpatia.":tier===1?"Um papo cordial, sem maiores promessas.":"Ele responde com cerimônia ríspida.";
+m.innerHTML=`${head(npc.name,`${escapeHTML(npc.occupation)} · ${npc.age} anos`)}<div class="dbox"><div class="dportrait" style="background:hsl(${npc.hue} 38% 44%)">${escapeHTML(npc.name[0])}</div><div style="flex:1;min-width:0"><p class="dline">${data.line}${data.giftText?`<br><br>${data.giftText}`:""}</p><p class="dmeta">${tierText}${feudOf(npc)?` · <span class="warning">está em rixa com ${escapeHTML((npcById(feudOf(npc).a===npc.id?feudOf(npc).b:feudOf(npc).a)||{name:"alguém"}).name)}</span>`:""}</p></div></div>
+<div style="display:flex;gap:8px;flex-wrap:wrap">${data.canMediate?`<button class="action gold" data-action="mediate" data-id="${npc.id}">Mediar a paz da rixa</button>`:""}
+<span class="muted" style="align-self:center;font-size:12px">Presentear:</span>
+${S.inventory.wheat>0?`<button class="action" data-action="gift" data-id="${npc.id}" data-item="wheat">🌾 Trigo</button>`:""}${S.inventory.mango>0?`<button class="action" data-action="gift" data-id="${npc.id}" data-item="mango">🥭 Manga</button>`:""}${S.inventory.fish>0?`<button class="action" data-action="gift" data-id="${npc.id}" data-item="fish">🐟 Peixe</button>`:""}${S.inventory.eggs>0?`<button class="action" data-action="gift" data-id="${npc.id}" data-item="eggs">🥚 Ovos</button>`:""}</div>`}
+else if(kind==="casa"){m.innerHTML=`${head("Sua casa","Um teto honesto, um galinheiro e uma cama que nunca reclama.")}
+<div class="grid2"><div class="tile"><h3>Descanso</h3><p>Energia: <b>${Math.round(S.energy)}%</b>. Dormir avança até de manhã e recupera 40 de energia. A soneca recupera 18 em 2 horas.</p>
+<button class="action primary" data-action="sleep">Dormir até amanhã</button> <button class="action" data-action="nap">Soneca de 2 horas</button></div>
+<div class="tile"><h3>Cozinha</h3><p>Comer recupera energia na hora.</p>
+<div style="display:flex;gap:6px;flex-wrap:wrap">${S.inventory.wheat>0?`<button class="action" data-action="eat" data-item="wheat">🌾 Trigo (+18)</button>`:""}${S.inventory.mango>0?`<button class="action" data-action="eat" data-item="mango">🥭 Manga (+25)</button>`:""}${S.inventory.fish>0?`<button class="action" data-action="eat" data-item="fish">🐟 Peixe (+30)</button>`:""}${S.inventory.eggs>0?`<button class="action" data-action="eat" data-item="eggs">🥚 Ovos (+12)</button>`:""}</div>
+<p class="muted" style="margin-top:8px">${S.inventory.wheat+S.inventory.mango+S.inventory.fish+S.inventory.eggs===0?"A despensa está vazia. Colha, pesque ou compre algo.":""}</p></div></div>
+<div class="tile" style="margin-top:12px"><h3>🐔 Galinheiro</h3><p>${S.chickens} galinha(s). Cada uma põe ovo na maioria das manhãs (ovos no inventário: ${S.inventory.eggs}). Compre mais no mercado.</p></div>`}
+else if(kind==="rio"){const season=seasonOf(S.day);m.innerHTML=`${head("O rio e a ponte","A água corre mansa — quando não corre brava.")}
+<div class="tile"><h3>🎣 Pescaria</h3><p>Uma pescaria leva 90 minutos e 12 de energia. Rende de 0 a 4 peixes conforme a estação (${SEASONS[season].label.toLowerCase()}) e o clima (${S.weather.toLowerCase()}).</p>
+<p>Peixe vale ${money(unitPriceOf("fish"))} no mercado (mais caro na seca) ou +30 de energia assado.</p>
+<button class="action primary" data-action="fish">Lançar a linha</button></div>`}
+else if(kind==="prefeitura"){renderPrefeitura()}
+else if(kind==="delegacia"){renderDelegacia()}
+else if(kind==="cedula"){const cands=validCandidates();const voteOpen=S.day>=S.nextElection-C.VOTE_WINDOW;m.innerHTML=`${head("Urna da vila","Uma cédula, um voto — o seu.")}${voteOpen?`<div class="grid3">${cands.map(c=>`<div class="tile"><span class="tag">${c.incumbent?"Governador atual":"Candidato(a)"}</span><h3>${escapeHTML(c.name)}</h3><p>${escapeHTML(c.occupation)}</p><p>Agricultura: ${c.A>0?"+":""}${c.A} · Ordem: ${c.O>0?"+":""}${c.O}</p><p>${campaignLine(c)}</p>${S.playerVote?`<p class="${S.playerVote===c.id?"good":"muted"}">${S.playerVote===c.id?"✓ Seu voto está aqui.":"—"}</p>`:`<button class="action primary" data-action="vote" data-c="${c.id}">Votar neste nome</button>`}</div>`).join("")}</div>${S.playerVote?`<p class="good" style="margin-top:10px">Você já votou. A apuração acontece no dia ${fmtDate(S.nextElection%365)}.</p>`:`<p class="muted" style="margin-top:10px">O voto é secreto até a apuração. Ninguém sabe em quem você votou — mas todos ouvem quem você apoia na praça.</p>`}`:`<div class="notice">A urna ainda está fechada. Ela abre ${S.nextElection-C.VOTE_WINDOW>S.day?`em ${S.nextElection-C.VOTE_WINDOW-S.day} dia(s)`:"em breve"} e a eleição é em ${S.nextElection-S.day} dia(s).</div>`}`}
+else if(kind==="eleicao"){const d=data||{};const winner=d.winner,cands=d.candidates||[],total=d.total||0;m.classList.remove("narrow");m.innerHTML=`${head("Resultado da eleição","A apuração terminou. Cada um dos 50 habitantes teve sua palavra.")}
+<div class="election-result"><div class="tag">Nova mandatária</div><h2 style="margin:6px 0">${escapeHTML(winner?winner.name:"—")}</h2><p>${winner?campaignLine(winner):""}</p><p class="muted">${winner?winner.votes:0} de ${total} votos${d.playerVoted?" · seu voto foi registrado":" · você não votou nesta eleição"}</p></div>
+${cands.map(c=>`<div style="margin-bottom:10px"><div class="row" style="padding:4px 0"><span>${c.incumbent?"<span class='pill gold'>atual</span> ":""}<b>${escapeHTML(c.name)}</b></span><span class="ratio">${c.votes} voto(s)</span></div><div class="vbar ${c===winner?"win":""}"><i style="width:${total?Math.round(c.votes/total*100):0}%"></i></div></div>`).join("")}
+<div class="tipbox"><b>E o agora?</b> As políticas do novo governo valem desde hoje: impostos, preços, furtos, licenças e a disposição da polícia. Abra o painel Governo para ver os números.</div>`}
+else if(kind==="wait"){const nextHarvest=S.parcels.filter(parcelActive).flatMap(p=>p.cells.filter(Boolean)).map(c=>Math.max(1,Math.ceil((c.need-c.progress)/Math.max(.01,growthMult())))).sort((a,b)=>a-b)[0];
+m.innerHTML=`${head("Avançar o tempo","O relógio da vila é generoso com quem espera.")}
+<div class="notice">Esperar passa os dias: plantações crescem, galinhas põem ovos, o mundo segue — e riscos de furto continuam valendo.</div>
+<div class="row"><span>Próxima plantação pronta</span><b>${nextHarvest?`em ~${nextHarvest} dia(s)`:"—"}</b></div>
+<div class="row"><span>Próxima eleição</span><b>em ${Math.max(0,S.nextElection-S.day)} dia(s)</b></div>
+<div class="row"><span>Previsão do tempo</span><b>${(WEATHERS[S.weather]||WEATHERS["Céu aberto"]).icon} ${S.weather}</b></div>
+<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="action primary" data-action="wait-days" data-days="1">Esperar 1 dia</button> <button class="action" data-action="wait-days" data-days="3">3 dias</button> <button class="action" data-action="wait-days" data-days="7">7 dias</button> <button class="action" data-action="sleep">Dormir até amanhã</button></div>`}
+else if(kind==="help"||kind==="controls"){renderHelp(kind)}
+else if(kind==="confirm-new"){m.innerHTML=`${head("Começar de novo?","Já existe uma campanha salva.")}<div class="notice">Começar uma nova vida apaga a campanha salva atualmente no navegador. Não há volta.</div><div style="display:flex;gap:8px"><button class="action danger" data-action="new-confirm">Sim, apagar e recomeçar</button> <button class="action" data-action="close">Cancelar</button></div>`}}
+function head(title,sub=""){return `<div class="modalhead"><div><h2>${title}</h2>${sub?`<p>${sub}</p>`:""}</div><button class="close" data-action="close" aria-label="Fechar">×</button></div>`}
+function renderPrefeitura(){const m=el("modal");if(!m||!S)return;const g=gov();const voteOpen=S.day>=S.nextElection-C.VOTE_WINDOW;const endorseOpen=S.day>=S.nextElection-C.ENDORSE_DAYS;
+m.innerHTML=`${head("Prefeitura e administração","Terras, licenças, obras, cofre e a urna da vila.")}
+<div class="grid2">
+<div class="tile"><span class="tag">Licença de expansão</span><h3>${S.permit?"Licença ativa":"Governo da ordem"}</h3><p>${g&&g.O>=50?"Com um governo de ordem (O ≥ 50), operar 3+ terrenos exige licença.":"Este governo não exige licença para expandir."}</p>${S.permit?`<p class="good">✓ Você pode operar quantos terrenos puder pagar.</p>`:g&&g.O>=50?`<button class="action primary" data-action="permit">Obter licença (${money(permitCost())})</button>`:""}</div>
+<div class="tile"><span class="tag">Cofre da vila</span><h3>Saldo: ${money(S.bank)}</h3><p>Deposite e receba 1% a cada 30 dias. Dinheiro guardado não vira semente.</p>
+<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="action" data-action="deposit" data-amt="50">Depositar $50</button> <button class="action" data-action="deposit" data-amt="999999">Depositar tudo</button> <button class="action" data-action="withdraw" data-amt="50">Sacar $50</button> <button class="action" data-action="withdraw" data-amt="999999">Sacar tudo</button></div></div></div>
+<h3 style="font-size:17px;margin:18px 0 8px">🏗️ Obras da comunidade</h3><div class="grid2">${Object.values(S.projects).map(pr=>`<div class="tile"><span class="tag">${pr.done?"Concluída":"Em arrecadação"}</span><h3>${pr.label}</h3><p>${pr.desc}</p><div class="projbar"><i style="width:${clamp(Math.round(pr.raised/pr.cost*100),0,100)}%"></i></div><p class="muted ratio">${money(Math.floor(pr.raised))} de ${money(pr.cost)} — os vizinhos também doam conforme a satisfação.</p>${pr.done?"":`<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="action primary" data-action="donate" data-project="${pr.key}" data-amt="25">Doar $25</button> <button class="action" data-action="donate" data-project="${pr.key}" data-amt="100">Doar $100</button></div>`}</div>`).join("")}</div>
+<h3 style="font-size:17px;margin:18px 0 8px">🗳️ Urna da eleição</h3>${voteOpen?`<div class="grid3">${validCandidates().map(c=>`<div class="tile"><h3>${escapeHTML(c.name)}</h3><p>${campaignLine(c)}</p>${S.playerVote===c.id?`<p class="good">✓ Seu voto está aqui.</p>`:S.playerVote?`<p class="muted">—</p>`:`<button class="action primary" data-action="vote" data-c="${c.id}">Votar</button>`}</div>`).join("")}</div>`:`<p class="muted">A urna abre nos últimos ${C.VOTE_WINDOW} dias antes da eleição — faltam ${Math.max(0,S.nextElection-C.VOTE_WINDOW-S.day)} dia(s) para abrir. ${endorseOpen&&!S.endorsedFor?`Você já pode declarar apoio público na aba Governo.`:""}</p>`}`}
+function renderHelp(kind){const m=el("modal");if(!m)return;const touch=DOM&&document.body.classList.contains("touch");
+const move=touch?"Use o direcional na tela":"<span class='kbd'>W A S D</span> ou setas para andar · <span class='kbd'>Shift</span> para correr";
+const act=touch?"Use o botão redondo <b>E</b>":"<span class='kbd'>E</span> ou <span class='kbd'>Enter</span> para interagir";
+if(kind==="controls"){m.innerHTML=`${head("Controles","Tudo o que seus dedos precisam saber.")}
+<div class="grid2"><div class="tile"><h3>No mapa</h3><p>${move}</p><p>${act}</p><p>${touch?"Toque no mapa para caminhar até o ponto":"Clique no mapa para caminhar até o ponto"}</p><p><span class="kbd">M</span> liga/desliga o minimapa</p></div>
+<div class="tile"><h3>Painéis e menus</h3><p>${touch?"Use os botões do menu":"Teclas <span class='kbd'>1</span>–<span class='kbd'>6</span> abrem os painéis"}</p><p><span class="kbd">Esc</span> fecha janelas</p><p>Botão <b>Como jogar</b> sempre disponível no menu e na barra lateral.</p></div></div>`;return}
+m.innerHTML=`${head("Como jogar","Uma vida simples, dentro de uma política que nunca fica quieta.")}
+<div class="scroll">
+<div class="tipbox"><b>Objetivo:</b> viver. Plantar, vender, fazer amigos, criar galinhas, pescar, influenciar eleições e morrer em paz numa vila que muda de humor a cada governo.</div>
+<div class="grid2">
+<div class="tile"><h3>🌱 O ciclo diário</h3><p>Plante nas suas terras (${act} perto de uma célula), espere os dias passarem (<b>Esperar</b> ou dormindo) e colha quando estiver pronto. Venda no mercado, coma em casa para recuperar energia e trabalhe um turno quando precisar de dinheiro garantido.</p></div>
+<div class="tile"><h3>🌾 Estações e clima</h3><p>Primavera acelera o crescimento (×1,15), inverno atrasa (×0,8). Chuva acelera (×1,2), seca atrasa (×0,6) e encarece o peixe; tempestade pode destruir plantação madura. O poço comunitário dá +10%.</p></div>
+<div class="tile"><h3>⚖️ Governos e políticas</h3><p>O eixo <b>Agricultura</b> favorece trigo (esquerda) ou manga (direita): muda preços em até ±35% e subsidia sementes. O eixo <b>Ordem</b> define imposto (2%–18%), risco de furto, necessidade de licença para 3+ terrenos e a eficácia da polícia.</p></div>
+<div class="tile"><h3>🗳️ Eleições</h3><p>A cada 4 anos, candidaturas surgem 60 dias antes. <b>Você vota</b> na urna da prefeitura nos últimos 10 dias — um voto entre 50. Também pode declarar apoio público (últimos 40 dias): amigos tenderão a seguir sua palavra.</p></div>
+<div class="tile"><h3>🚨 Ocupações irregulares</h3><p>Vizinhos ousados plantam nas terras dos outros quando a ordem anda baixa. Nas suas terras, decida: arrancar, denunciar (só funciona com governo ordeiro), pedir ajuda a um amigo ou colher. O sítio alheio se resolve sozinho — quando há polícia disposta.</p></div>
+<div class="tile"><h3>🤝 Gente</h3><p>Cada um dos 49 vizinhos tem ideias, humor e memória. Converse todos os dias: o tom das falas revela a amizade (não há números). Amigos dão presentes, avisam de perigos, seguem seu voto e mediam rixas. Rixas entre vizinhos aparecem no noticiário — mediar as pazes dá renome.</p></div>
+<div class="tile"><h3>🏗️ Obras e cofre</h3><p>Doe na prefeitura para poço, estrada, celeiro e escola — os vizinhos completam o resto conforme a satisfação. O cofre da vila rende 1% ao mês.</p></div>
+<div class="tile"><h3>🐔 Vida doméstica</h3><p>Galinhas põem ovos quase todo dia. Peixe do rio vende bem na seca. Dormir recupera energia; comer recupera mais rápido. Renome alto dá bônus de preço e abertura de portas.</p></div></div>
+<div class="tipbox"><b>Controles:</b> ${move} · ${act} · <span class="kbd">Esc</span> fecha · <span class="kbd">M</span> minimapa.</div>
+</div>`}
+function closeModal(){const ov=el("overlay");if(ov)ov.classList.remove("open");modalKind=null;if(S&&!S.ended){S.paused=false;updateUI()}}
+/* ================= interação ================= */
+const PLACES=[{name:"Mercado",x:18,y:9.4,hint:"E — Entrar no mercado"},{name:"Prefeitura",x:22,y:9.4,hint:"E — Prefeitura: licenças, obras, cofre e urna"},{name:"Praça",x:20,y:13.8,hint:"E — Praça: conversas e apoio público"},{name:"Casa",x:9,y:13.6,hint:"E — Descansar em casa"},{name:"Delegacia",x:27,y:9.2,hint:"E — Delegacia: registrar queixas"},{name:"Ponte",x:33.2,y:18,hint:"E — Pescar no rio"}];
+function getNearby(){if(!S)return null;const px=S.player.x,py=S.player.y;let best=null,dist=1.15;
+for(const p of S.parcels){for(let i=0;i<9;i++){const x=p.x+(i%3)*1.05,y=p.y+Math.floor(i/3)*1.05,d=Math.hypot(x-px,y-py);if(d<dist){dist=d;const c=p.cells[i];const ready=c&&c.ready;const illegal=c&&c.illegal;
+const hint=illegal?`E — Confrontar ocupação de ${(npcById(c.invader)||{name:"um invasor"}).name}`:ready?`E — Colher ${c.crop==="wheat"?"trigo":"mangas"}`:c?`E — Plantio em crescimento (${Math.max(0,Math.ceil((c.need-c.progress)/Math.max(.01,growthMult())))} dia(s))`:parcelActive(p)?"E — Plantar nesta célula":p.owner&&p.owner!=="player"?`E — Sítio de ${(npcById(p.owner)||{name:"um vizinho"}).name}`:`E — Terreno ${p.id.toUpperCase()} disponível`;
+best={type:"cell",parcel:p,index:i,hint}}}}
+for(const v of PLACES){const d=Math.hypot(v.x-px,v.y-py);if(d<Math.min(dist,1.7)){dist=d;best={type:"place",...v}}}
+for(const n of S.population){if(n.role==="player")continue;const d=Math.hypot(n.x-px,n.y-py);if(d<Math.min(dist,1.25)){dist=d;best={type:"npc",npc:n,hint:`E — Conversar com ${n.name}`}}}
+return best}
+function interact(){const n=getNearby();if(!n){toast("Não há nada próximo para interagir.");return}
+if(n.type==="cell"){const c=n.parcel.cells[n.index];if(c&&c.illegal){openModal("invasao",{p:n.parcel.id,i:n.index});return}if(c){if(c.ready)harvest(n.parcel,n.index);else toast(`${c.crop==="wheat"?"Trigo":"Mangueira"} em crescimento. Volte quando amadurecer.`)}else openModal("plant",{parcel:n.parcel,index:n.index});return}
+if(n.type==="place"){if(n.name==="Mercado")openModal("panel",{tab:"Mercado"});else if(n.name==="Prefeitura")openModal("prefeitura");else if(n.name==="Ponte")openModal("rio");else if(n.name==="Casa")openModal("casa");else if(n.name==="Delegacia")openModal("delegacia");else openModal("panel",{tab:"Vila"});return}
+if(n.type==="npc")talkTo(n.npc.id)}
+/* delegacia: queixas e conversa */
+function renderDelegacia(){const m=el("modal");if(!m||!S)return;const g=gov();const illegals=[];S.parcels.forEach(p=>{if(parcelActive(p))p.cells.forEach((c,i)=>{if(c&&c.illegal)illegals.push({p,i,invader:npcById(c.invader)})})});const officer=S.population.find(p=>p.role==="police");
+m.innerHTML=`${head("Delegacia","A ordem pública custa imposto — e vontade política.")}
+<div class="notice">${g&&g.O>=50?"O delegado recebe boletins com vontade: remoção imediata e indenização ao proprietário.":g&&g.O>=25?"A delegacia registra tudo, mas só age depois de alguns dias.":"Com este governo, a delegacia faz o possível: quase nada."}</div>
+${illegals.length?`<h3 style="font-size:16px;margin:12px 0 6px">Suas queixas possíveis</h3>${illegals.map(o=>`<div class="row"><span>Ocupação de <b>${escapeHTML((o.invader||{name:"desconhecido"}).name)}</b> no ${o.p.id.toUpperCase()} (célula ${o.i+1})</span><button class="action danger" data-action="report-illegal" data-p="${o.p.id}" data-i="${o.i}">Registrar queixa (1h)</button></div>`).join("")}`:`<p class="muted">Nenhuma ocupação irregular nas suas terras neste momento.</p>`}
+${officer?`<div class="tile" style="margin-top:12px"><h3>No balcão</h3><p>${escapeHTML(officer.name)}, ${escapeHTML(officer.occupation)}, cuida do turno. Um papo custa 10 minutos e uma gentileza.</p><button class="action" data-action="talk" data-id="${officer.id}">Conversar com o policial</button></div>`:""}`}
+/* ================= fim ================= */
+function endCampaign(){if(!S||S.ended)return;S.ended=true;S.paused=true;S.governorHistory.forEach(h=>{if(h.endDay===null)h.endDay=S.day});event("Fim de uma vida",`A vida de ${S.age} anos na Vila do Ipê chegou ao fim.`);save();showEnding()}
+function showEnding(){if(!DOM)return;const owned=S.parcels.filter(p=>p.owned&&p.owner==="player").length;const rented=S.parcels.filter(p=>p.rentUntil!==null&&p.rentUntil>=S.day).length;const net=S.money+S.bank+owned*C.LAND_PRICE;const bestFriend=S.population.filter(p=>p.role!=="player").sort((a,b)=>(b.rel||0)-(a.rel||0))[0];
+const chron=S.events.filter(e=>["Vida nova","Eleição","Terreno comprado","Terreno alugado","Colheita","Ocupação removida","Paz na vila","Obra concluída","Fim de uma vida"].includes(e.type)).slice(-10).map(e=>`<li><b>${fmtDate(e.day%365)} · ${escapeHTML(e.type)}</b> — ${escapeHTML(e.text)}</li>`).join("")||"<li>Uma vida vivida dia após dia, em meio às mudanças da vila.</li>";
+el("endingContent").innerHTML=`<div class="modalhead"><div><div class="eyebrow" style="color:#8a7638">Crônica de uma vida</div><h2>Uma vida na Vila do Ipê</h2><p>Uma história feita de trabalho, estações, amizades e governos.</p></div></div>
+<div class="grid3"><div class="tile"><span class="tag">Idade final</span><h3>${S.age} anos</h3><p>${S.stats.years} anos completos na vila · ${repTitle()}</p></div>
+<div class="tile"><span class="tag">Patrimônio estimado</span><h3>${money(net)}</h3><p>Saldo ${money(S.money)} · cofre ${money(S.bank)} · ${owned} terreno(s) próprio(s)</p></div>
+<div class="tile"><span class="tag">Safras</span><h3>${S.stats.harvests} colheitas</h3><p>${S.stats.wheatHarvested} trigos · ${S.stats.mangoHarvested} mangas · ${S.stats.fishCaught} peixes</p></div></div>
+<div class="grid2" style="margin-top:12px"><div class="tile"><h3>Governos e eleições</h3><p>${S.stats.elections} eleição(ões) · ${rented} terreno(s) alugado(s) na data final</p><p>${S.governorHistory.map(h=>escapeHTML(h.name)).join(" → ")}</p></div>
+<div class="tile"><h3>Marca que você deixou</h3><p>${S.stats.conflictsSolved} rixa(s) apaziguada(s) · ${S.stats.invasions} ocupação(ões) resolvida(s) · ${S.stats.projects} obra(s) concluída(s)</p><p>${bestFriend&&(bestFriend.rel||0)>0?`A amizade mais profunda ficou com <b>${escapeHTML(bestFriend.name)}</b>.`:"Nenhuma amizade profunda se formou — a vila ainda espera."}</p></div>
+<div class="tile" style="grid-column:1/-1"><h3>Crônica local</h3><ul class="scroll">${chron}</ul></div></div>
+<div style="display:flex;justify-content:flex-end;margin-top:18px"><button class="action primary" data-action="ending-menu">Voltar ao menu</button></div>`;
+el("gameUI").style.display="none";el("endingScreen").classList.add("show")}
+/* ================= gráficos ================= */
+function resize(){if(!canvas||!S)return;drawWorld(performance.now())}
+function rr(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
+const BUILDINGS=[[18,7.4,2.6,1.7,"MERCADO","#d5ad70"],[22,7.4,2.7,1.85,"PREFEITURA","#d7c9a2"],[27,7.4,2.1,1.55,"DELEGACIA","#9baec1"],[8,12.1,2.3,1.7,"SUA CASA","#d6bc92"]];
+const HOMES=HOME_SPOTS.slice(0,24);
+const TREES=[[3,4],[5,23],[33,3.5],[29,24.5],[12,3],[3,20],[31,12.8],[26,5],[35.8,10],[35,25],[2,9],[16,26],[6,17],[23,12]];
+function daylight(){const hr=S.hour+S.minute/60;if(hr>=7&&hr<17)return 1;if(hr>=5&&hr<7)return (hr-5)/2;if(hr>=17&&hr<20)return 1-(hr-17)/3;return 0}
+function drawWorld(t){if(!ctx||!S)return;const dpr=Math.min(window.devicePixelRatio||1,2),w=canvas.clientWidth,h=canvas.clientHeight;if(!w||!h)return;if(canvas.width!==Math.floor(w*dpr)||canvas.height!==Math.floor(h*dpr)){canvas.width=Math.floor(w*dpr);canvas.height=Math.floor(h*dpr)}
+ctx.setTransform(dpr,0,0,dpr,0,0);const unit=Math.min(w/22,h/16);
+const camX=clamp(S.player.x,11,C.MAP_W-11),camY=clamp(S.player.y,8,C.MAP_H-8);
+const ox=w/2-camX*unit,oy=h/2-camY*unit,sx=x=>ox+x*unit,sy=y=>oy+y*unit;
+const season=SEASONS[seasonOf(S.day)];
+ctx.fillStyle=season.grass[1];ctx.fillRect(0,0,w,h);
+const x0=Math.max(0,Math.floor(-ox/unit)),x1=Math.min(C.MAP_W,Math.ceil((w-ox)/unit)),y0=Math.max(0,Math.floor(-oy/unit)),y1=Math.min(C.MAP_H,Math.ceil((h-oy)/unit));
+for(let y=y0;y<y1;y++)for(let x=x0;x<x1;x++){const seed=(x*9277+y*1319)%13;ctx.fillStyle=season.grass[seed<2?0:seed===5?2:1];ctx.fillRect(sx(x),sy(y),unit+1,unit+1);if(seasonOf(S.day)!=="inverno"&&seed===3){ctx.fillStyle=seasonOf(S.day)==="primavera"?"#e7a8c8":"#f0e3a0";ctx.beginPath();ctx.arc(sx(x+.5),sy(y+.5),unit*.08,0,7);ctx.fill()}}
+ctx.strokeStyle="#cfb98a";ctx.lineWidth=unit*.5;ctx.lineCap="round";ctx.beginPath();ctx.moveTo(sx(1),sy(15));ctx.bezierCurveTo(sx(9),sy(14),sx(13),sy(13),sx(20),sy(14));ctx.bezierCurveTo(sx(25),sy(15),sx(28),sy(13.8),sx(33),sy(14));ctx.stroke();
+ctx.strokeStyle="#e2cfa5";ctx.lineWidth=unit*.22;ctx.beginPath();ctx.moveTo(sx(1),sy(15));ctx.bezierCurveTo(sx(9),sy(14),sx(13),sy(13),sx(20),sy(14));ctx.bezierCurveTo(sx(25),sy(15),sx(28),sy(13.8),sx(33),sy(14));ctx.stroke();
+for(let i=0;i<9;i++){const px2=6+i*2.8,py2=15+(i%2)*.12;ctx.fillStyle="#b9b4a3";ctx.beginPath();ctx.ellipse(sx(px2),sy(py2),unit*.14,unit*.09,-.3,0,7);ctx.fill()}
+for(const p of S.parcels){const px=p.x-.35,py=p.y-.35,pw=3*1.05+.7;const mine=p.owned&&p.owner==="player",npcOwned=p.owner&&p.owner!=="player";
+ctx.fillStyle="#8a6f4b";ctx.globalAlpha=mine||parcelActive(p)?.9:.65;rr(sx(px),sy(py),pw*unit,pw*unit,unit*.2);ctx.fill();ctx.globalAlpha=1;
+ctx.fillStyle="#7a5f3e";for(let i=0;i<9;i++){const cx2=px+.35+(i%3)*1.05,cy2=py+.35+Math.floor(i/3)*1.05;rr(sx(cx2),sy(cy2),.8*unit,.8*unit,unit*.12);ctx.fill()}
+ctx.lineWidth=unit*.08;ctx.strokeStyle=mine?"#5b4326":npcOwned?"#6d5836":"#9b8563";if(mine||npcOwned){for(let e=0;e<4;e++){ctx.beginPath();ctx.moveTo(sx(px+e*pw/3),sy(py));ctx.lineTo(sx(px+e*pw/3),sy(py+pw));ctx.stroke()}ctx.beginPath();ctx.moveTo(sx(px),sy(py));ctx.lineTo(sx(px+pw),sy(py));ctx.moveTo(sx(px),sy(py+pw));ctx.lineTo(sx(px+pw),sy(py+pw));ctx.stroke()}
+if(!mine&&!npcOwned&&!parcelActive(p)){ctx.fillStyle="#4a3a20";ctx.fillRect(sx(px+pw/2-unit*.06),sy(py-0.55),unit*.12,unit*.5);ctx.fillStyle="#efe6cf";rr(sx(px+pw/2-unit*.42),sy(py-0.85),unit*.84,unit*.34,unit*.08);ctx.fill();ctx.fillStyle="#5a4a26";ctx.font=`bold ${Math.max(8,unit*.22)}px Verdana`;ctx.textAlign="center";ctx.fillText("$"+p.price,sx(px+pw/2),sy(py-0.6))}
+for(let i=0;i<9;i++){const c=p.cells[i];if(c){const cxT=px+.75+(i%3)*1.05,cyT=py+.75+Math.floor(i/3)*1.05;drawCrop(c,sx(cxT),sy(cyT),unit,t)}}}
+ctx.fillStyle="#69a7ad";ctx.beginPath();ctx.moveTo(sx(34.4),sy(-1));ctx.bezierCurveTo(sx(33.2),sy(4),sx(35.2),sy(8),sx(34),sy(13));ctx.bezierCurveTo(sx(33),sy(19),sx(35.4),sy(23),sx(33.6),sy(29));ctx.lineTo(sx(39),sy(29));ctx.lineTo(sx(39),sy(-1));ctx.closePath();ctx.fill();
+ctx.strokeStyle="#8fc4c9";ctx.lineWidth=unit*.09;for(let i=0;i<5;i++){ctx.beginPath();const wy2=3+i*4.6,off=Math.sin(t/700+i)*.3;ctx.moveTo(sx(34+off),sy(wy2));ctx.quadraticCurveTo(sx(35.4+off),sy(wy2+.9),sx(34.2+off),sy(wy2+1.8));ctx.stroke()}
+ctx.fillStyle="#a58b5f";rr(sx(32.6),sy(17.4),1.8*unit,1.2*unit,unit*.12);ctx.fill();ctx.strokeStyle="#7c6440";ctx.lineWidth=unit*.06;for(let i=0;i<5;i++){ctx.beginPath();ctx.moveTo(sx(32.7+i*.36),sy(17.4));ctx.lineTo(sx(32.7+i*.36),sy(18.6));ctx.stroke()}
+for(const b of BUILDINGS)drawBuilding(sx(b[0]),sy(b[1]),b[2]*unit,b[3]*unit,b[4],b[5],unit,t);
+HOMES.forEach((p,i)=>drawBuilding(sx(p[0]),sy(p[1]),1.25*unit,.95*unit,"",["#c99363","#d8c49c","#b98562","#cdb089"][i%4],unit,t));
+for(const [tx,ty] of TREES)drawTree(sx(tx),sy(ty),unit*1.05,t,seasonOf(S.day));
+const plaza=20,plazay=13.5;ctx.fillStyle="#d9cfae";ctx.beginPath();ctx.ellipse(sx(plaza),sy(plazay),unit*2.1,unit*1.35,0,0,7);ctx.fill();ctx.strokeStyle="#c4b892";ctx.lineWidth=unit*.08;ctx.stroke();
+ctx.fillStyle="#8f948e";ctx.beginPath();ctx.arc(sx(plaza),sy(plazay),unit*.5,0,7);ctx.fill();ctx.fillStyle="#7cc3cc";ctx.beginPath();ctx.arc(sx(plaza),sy(plazay),unit*.38+Math.sin(t/500)*unit*.02,0,7);ctx.fill();ctx.fillStyle="#eef6f6";ctx.beginPath();ctx.arc(sx(plaza),sy(plazay),unit*.09,0,7);ctx.fill();
+ctx.fillStyle="#6b543a";ctx.fillRect(sx(plaza-1.6)-unit*.07,sy(plazay+.2),unit*.14,unit*.4);ctx.fillStyle="#8a8266";rr(sx(plaza-1.9),sy(plazay+.5),unit*.6,unit*.14,unit*.05);ctx.fill();
+drawIpe(sx(plaza+.9),sy(plazay-.1),unit,t,seasonOf(S.day));
+if(S.chickens>0){for(let i=0;i<S.chickens;i++){const cx2=10.8+Math.sin(t/900+i*2)*.5,cy2=14.9+Math.cos(t/1100+i*3)*.3;ctx.fillStyle="#f5f0e4";ctx.beginPath();ctx.ellipse(sx(cx2),sy(cy2),unit*.14,unit*.10,0,0,7);ctx.fill();ctx.beginPath();ctx.arc(sx(cx2+unit*.1),sy(cy2-unit*.07),unit*.06,0,7);ctx.fill();ctx.fillStyle="#d6a84f";ctx.fillRect(sx(cx2+unit*.14),sy(cy2-unit*.07),unit*.06,unit*.03)}}
+drawIpe(sx(10.8),sy(11.2),unit*.9,t,seasonOf(S.day));
+const drawables=[];for(const n of S.population){if(n.role==="player")continue;if(Math.abs(n.x-camX)>12||Math.abs(n.y-camY)>9)continue;drawables.push(n)}
+const pv={x:S.player.x,y:S.player.y,role:"player",hue:24,skin:"#e3b98e",step:S.player.step,face:S.player.face,name:"Você"};
+drawables.push(pv);drawables.sort((a,b)=>a.y-b.y);
+for(const n of drawables){if(n.role==="player")drawPerson(sx(n.x),sy(n.y),unit*.42,n,true,t);else drawPerson(sx(n.x),sy(n.y),unit*.40,n,false,t)}
+const near=getNearby();if(near){let hx,hy;if(near.type==="cell"){hx=near.parcel.x+(near.index%3)*1.05;hy=near.parcel.y+Math.floor(near.index/3)*1.05}else if(near.type==="place"){hx=near.x;hy=near.y}else{hx=near.npc.x;hy=near.npc.y}
+ctx.strokeStyle="#ffe9a8";ctx.lineWidth=unit*.07;ctx.globalAlpha=.5+.4*Math.sin(t/220);ctx.beginPath();ctx.arc(sx(hx),sy(hy),unit*.62+Math.sin(t/220)*unit*.06,0,7);ctx.stroke();ctx.globalAlpha=1}
+updateParticles(t,w,h);
+const dl=daylight();ctx.fillStyle=`rgba(14,24,46,${(.5*(1-dl)).toFixed(3)})`;ctx.fillRect(0,0,w,h);
+if(dl>0&&dl<1){const warm=(dl<.5?dl:.5-(dl-.5))*2;ctx.fillStyle=`rgba(255,140,50,${(.12*warm).toFixed(3)})`;ctx.fillRect(0,0,w,h)}
+if(S.weather==="Seca"){ctx.fillStyle="rgba(224,180,80,.10)";ctx.fillRect(0,0,w,h)}
+if(S.weather==="Tempestade"){ctx.fillStyle="rgba(20,30,50,.18)";ctx.fillRect(0,0,w,h);if(flashT&&t<flashT){ctx.fillStyle="rgba(255,255,240,.5)";ctx.fillRect(0,0,w,h)}else if(chance(.003))flashT=t+90}
+if(showMinimap)drawMinimap(w,h);
+const tip=el("mapTip");if(tip)tip.textContent=near?near.hint.replace("E — ","")+((DOM&&document.body.classList.contains("touch"))?"  ·  botão E":"  ·  tecla E"):"Ande pelo mapa · E interage · M minimapa";
+const hint2=el("contextHint");if(hint2)hint2.textContent=near?near.hint:"Caminhe pela vila para explorar."}
+function drawCrop(c,cx2,cy2,u,t){const prog=clamp((c.progress||0)/(c.need||1),0,1);
+if(c.crop==="wheat"){const hgt=u*(.18+.62*prog);ctx.strokeStyle=prog>=1?"#d8a83c":"#5c8a3f";ctx.lineWidth=u*.05;
+for(let i=-1;i<=1;i++){ctx.beginPath();ctx.moveTo(cx2+i*u*.16,cy2+u*.2);ctx.lineTo(cx2+i*u*.16+Math.sin(t/600+i)*u*.02,cy2+u*.2-hgt);ctx.stroke()}
+if(prog>=1){ctx.fillStyle="#e8c05a";for(let i=-1;i<=1;i++){ctx.beginPath();ctx.ellipse(cx2+i*u*.16,cy2+u*.2-hgt,u*.05,u*.09,0,0,7);ctx.fill()}}}
+else{const hgt=u*(.22+.5*prog);ctx.fillStyle="#6b4a2e";ctx.fillRect(cx2-u*.05,cy2+u*.18-hgt,u*.1,hgt);
+ctx.fillStyle=prog>=1?"#3e6b3a":"#4d7a42";ctx.beginPath();ctx.arc(cx2,cy2+u*.14-hgt,u*(.2+.22*prog),0,7);ctx.arc(cx2-u*.14,cy2+u*.2-hgt*.8,u*(.14+.14*prog),0,7);ctx.arc(cx2+u*.14,cy2+u*.2-hgt*.8,u*(.14+.14*prog),0,7);ctx.fill();
+if(prog>=1){ctx.fillStyle="#e8933a";for(let i=0;i<3;i++){ctx.beginPath();ctx.arc(cx2+(i-1)*u*.12,cy2+u*.1-hgt+u*.06*i,u*.06,0,7);ctx.fill()}}
+if(prog>=1&&Math.sin(t/300)>0){ctx.fillStyle="#fff3c2aa";ctx.beginPath();ctx.arc(cx2+u*.24,cy2+u*.1-hgt-u*.1,u*.05,0,7);ctx.fill()}}
+if(c.illegal){ctx.strokeStyle="#8d463e";ctx.lineWidth=u*.045;ctx.beginPath();ctx.moveTo(cx2+u*.3,cy2+u*.24);ctx.lineTo(cx2+u*.3,cy2+u*.24-u*.34);ctx.stroke();ctx.fillStyle="#c14b3a";ctx.beginPath();ctx.moveTo(cx2+u*.3,cy2+u*.24-u*.34);ctx.lineTo(cx2+u*.3+u*.2,cy2+u*.24-u*.26);ctx.lineTo(cx2+u*.3,cy2+u*.24-u*.18);ctx.closePath();ctx.fill()}}
+function drawTree(x,y,u,t){const sway=Math.sin(t/1400+x*.05)*.04;ctx.fillStyle="#00000018";ctx.beginPath();ctx.ellipse(x,y+u*.28,u*.4,u*.12,0,0,7);ctx.fill();
+ctx.save();ctx.translate(x,y);ctx.rotate(sway);ctx.fillStyle="#664b32";ctx.fillRect(-u*.07,-u*.12,u*.14,u*.45);
+ctx.fillStyle="#49784d";ctx.beginPath();ctx.arc(0,-u*.3,u*.32,0,7);ctx.arc(-u*.2,-u*.16,u*.22,0,7);ctx.arc(u*.2,-u*.16,u*.22,0,7);ctx.fill();
+ctx.fillStyle="#ffffff12";ctx.beginPath();ctx.arc(-u*.08,-u*.38,u*.12,0,7);ctx.fill();ctx.restore()}
+function drawIpe(x,y,u,t,seasonKey){ctx.fillStyle="#00000018";ctx.beginPath();ctx.ellipse(x,y+u*.3,u*.42,u*.12,0,0,7);ctx.fill();
+ctx.fillStyle="#6b543a";ctx.fillRect(x-u*.06,y-u*.3,u*.12,u*.6);
+ctx.strokeStyle="#6b543a";ctx.lineWidth=u*.05;ctx.beginPath();ctx.moveTo(x,y-u*.3);ctx.lineTo(x-u*.14,y-u*.44);ctx.moveTo(x,y-u*.34);ctx.lineTo(x+u*.16,y-u*.5);ctx.stroke();
+const bloom=(seasonKey==="primavera"||seasonKey==="inverno");ctx.fillStyle=bloom?"#b78fc7":"#4d7a42";
+ctx.beginPath();ctx.arc(x,y-u*.62,u*.24,0,7);ctx.arc(x-u*.18,y-u*.48,u*.18,0,7);ctx.arc(x+u*.18,y-u*.5,u*.18,0,7);ctx.arc(x,y-u*.44,u*.2,0,7);ctx.fill();
+if(bloom){ctx.fillStyle="#e3c2e8";ctx.beginPath();ctx.arc(x-u*.05,y-u*.66,u*.07,0,7);ctx.arc(x+u*.12,y-u*.54,u*.05,0,7);ctx.fill()}}
+function drawBuilding(x,y,w,h,name,color,u,t){ctx.fillStyle="#00000022";ctx.fillRect(x-w/2+3,y-h/2+5,w,h);
+ctx.fillStyle=color;rr(x-w/2,y-h/2+h*.18,w,h*.82,u*.14);ctx.fill();
+ctx.fillStyle="rgba(0,0,0,.12)";ctx.fillRect(x-w/2,y-h/2+h*.55,w,h*.45);
+ctx.fillStyle="#8d6f4a";ctx.beginPath();ctx.moveTo(x-w*.58,y-h/2+h*.2);ctx.lineTo(x-w*.5,y-h/2-2);ctx.lineTo(x+w*.5,y-h/2-2);ctx.lineTo(x+w*.58,y-h/2+h*.2);ctx.closePath();ctx.fill();
+ctx.fillStyle="#6e5436";ctx.beginPath();ctx.moveTo(x-w*.58,y-h/2+h*.2);ctx.lineTo(x-w*.5,y-h/2-2);ctx.lineTo(x,y-h/2-2);ctx.lineTo(x+w*.08,y-h/2+h*.2);ctx.closePath();ctx.fill();
+ctx.fillStyle="#5d4426";rr(x-u*.16,y+h*.08,u*.32,h*.5,u*.06);ctx.fill();
+const dl=daylight();ctx.fillStyle=dl<.6?"#ffe08a":"#87b3c9";rr(x-w*.36,y-h*.02,w*.16,h*.2,u*.03);ctx.fill();rr(x+w*.2,y-h*.02,w*.16,h*.2,u*.03);ctx.fill();
+if(dl<.6){ctx.fillStyle="#ffd76a33";ctx.fillRect(x-w*.4,y+h*.2,w*.8,h*.3)}
+if(name){ctx.font=`bold ${Math.max(9,u*.26)}px Verdana`;ctx.textAlign="center";ctx.fillStyle="#3a2f1c";ctx.strokeStyle="#f6efdcb0";ctx.lineWidth=u*.1;ctx.strokeText(name,x,y-h/2-u*.12);ctx.fillText(name,x,y-h/2-u*.12)}}
+function drawPerson(x,y,r,p,player,t){const bob=Math.sin((t/130)+((p.step||0)))*r*.06;const moving=p.isMoving?1:0;
+ctx.fillStyle="#263b2c44";ctx.beginPath();ctx.ellipse(x,y+r*.72,r*.7,r*.26,0,0,7);ctx.fill();
+const bodyCol=player?"#254f80":p.role==="police"?"#34547a":p.role==="governor"?"#2c6a4b":`hsl(${p.hue||190} 34% 46%)`;
+ctx.fillStyle=bodyCol;rr(x-r*.42,y-r*.5+bob,r*.84,r*1.1,r*.3);ctx.fill();
+if(player){ctx.strokeStyle="#fff3d8aa";ctx.lineWidth=r*.1;rr(x-r*.42,y-r*.5+bob,r*.84,r*1.1,r*.3);ctx.stroke()}
+if(p.role==="governor"){ctx.strokeStyle="#e6c35c";ctx.lineWidth=r*.14;ctx.beginPath();ctx.moveTo(x-r*.3,y-r*.42+bob);ctx.lineTo(x+r*.3,y+r*.5+bob);ctx.stroke()}
+if(p.role==="police"){ctx.fillStyle="#f2d24c";ctx.beginPath();ctx.arc(x,y-r*.1+bob,r*.1,0,7);ctx.fill()}
+ctx.fillStyle=p.skin||"#e3b98e";ctx.beginPath();ctx.arc(x,y-r*.62+bob,r*.34,0,7);ctx.fill();
+if(p.occupation&&(p.occupation.includes("agricult")||player)){ctx.fillStyle="#d9c07a";ctx.beginPath();ctx.ellipse(x,y-r*.78+bob,r*.4,r*.14,0,0,7);ctx.fill()}
+if(player){ctx.strokeStyle="#2c2416";ctx.lineWidth=r*.05;ctx.beginPath();ctx.arc(x,y-r*.78+bob,r*.38,Math.PI,Math.PI*2);ctx.stroke()}
+if(!player&&S&&Math.hypot((p.x||0)-S.player.x,(p.y||0)-S.player.y)<2.6){ctx.font=`bold ${Math.max(9,r*.4)}px Verdana`;ctx.textAlign="center";const label=p.name.split(" ")[0];const lw=ctx.measureText(label).width+10;ctx.fillStyle="#1c3628cc";rr(x-lw/2,y-r*1.7+bob-4,lw,r*.5+8,r*.2);ctx.fill();ctx.fillStyle="#f4ecd6";ctx.fillText(label,x,y-r*1.32+bob)}}
+function updateParticles(t,w,h){if(S.weather==="Chuva leve"||S.weather==="Tempestade"){const want=S.weather==="Tempestade"?90:45;while(rainDrops.length<want)rainDrops.push({x:Math.random()*w,y:Math.random()*h,v:300+Math.random()*200});while(rainDrops.length>want)rainDrops.pop();
+ctx.strokeStyle="#bcd8e4aa";ctx.lineWidth=1.2;for(const d of rainDrops){d.y+=d.v*.016;d.x-=d.v*.004;if(d.y>h){d.y=-10;d.x=Math.random()*w}ctx.beginPath();ctx.moveTo(d.x,d.y);ctx.lineTo(d.x+2,d.y+9);ctx.stroke()}}
+else rainDrops.length=0;
+const seasonKey=seasonOf(S.day);if(seasonKey==="outono"){while(leaves.length<12)leaves.push({x:Math.random()*w,y:Math.random()*h,v:20+Math.random()*30,ph:Math.random()*7});ctx.fillStyle="#c98d4e";for(const l of leaves){l.y+=l.v*.016;l.x+=Math.sin(t/800+l.ph)*.6;if(l.y>h){l.y=-8;l.x=Math.random()*w}ctx.save();ctx.translate(l.x,l.y);ctx.rotate(t/900+l.ph);ctx.fillRect(-3,-2,6,4);ctx.restore()}}
+else leaves.length=0;
+if((seasonKey==="verao"||seasonKey==="primavera")&&daylight()>.5){while(fireflies.length<6)fireflies.push({x:Math.random()*w,y:Math.random()*h*.7,ph:Math.random()*7});ctx.fillStyle="#fff1a8";for(const f of fireflies){const a=.3+.7*Math.abs(Math.sin(t/900+f.ph));ctx.globalAlpha=a;ctx.beginPath();ctx.arc(f.x+Math.sin(t/1300+f.ph)*20,f.y+Math.cos(t/1500+f.ph)*10,2,0,7);ctx.fill()}ctx.globalAlpha=1}}
+function drawMinimap(w,h){const mw=138,mh=104,mx=w-mw-12,my=h-mh-12;ctx.fillStyle="#1c3628d9";rr(mx,my,mw,mh,10);ctx.fill();ctx.strokeStyle="#f4ecd655";ctx.lineWidth=1;ctx.stroke();
+const kx=v=>mx+4+(v/C.MAP_W)*(mw-8),ky=v=>my+4+(v/C.MAP_H)*(mh-8);
+for(const p of S.parcels){ctx.fillStyle=p.owned&&p.owner==="player"?"#7bc46a":p.owner&&p.owner!=="player"?"#c98d4e":parcelActive(p)?"#9dc57e":"#a89b78";ctx.fillRect(kx(p.x-.5),ky(p.y-.5),8,8)}
+for(const b of BUILDINGS){ctx.fillStyle="#f4ecd6";ctx.fillRect(kx(b[0])-2,ky(b[1])-2,4,4)}
+for(const n of S.population){if(n.role==="governor"){ctx.fillStyle="#e6c35c";ctx.fillRect(kx(n.x)-2,ky(n.y)-2,4,4)}else if(n.role==="police"){ctx.fillStyle="#7ba3d0";ctx.fillRect(kx(n.x)-1.5,ky(n.y)-1.5,3,3)}}
+ctx.fillStyle="#ffdf6b";ctx.beginPath();ctx.arc(kx(S.player.x),ky(S.player.y),3,0,7);ctx.fill();ctx.strokeStyle="#ffdf6b88";ctx.beginPath();ctx.arc(kx(S.player.x),ky(S.player.y),5,0,7);ctx.stroke()}
+const BUILD_RECTS=BUILDINGS.map(b=>[b[0],b[1],b[2]/2+.25,b[3]/2+.2]).concat([[20,13.5,.75,.65],[10.8,14.8,.6,.5]]).concat(HOMES.map(p=>[p[0],p[1],.75,.62]));
+function collides(x,y){if(x<1||y<1||x>C.MAP_W-1||y>C.MAP_H-1)return true;const bridge=(y>17.2&&y<18.8);if(x>33.4&&!bridge)return true;if(bridge&&x>34.4)return true;
+for(const r of BUILD_RECTS){if(Math.abs(x-r[0])<r[2]&&Math.abs(y-r[1])<r[3])return true}return false}
+function npcStep(dt,t){if(!S)return;for(const n of S.population){if(n.role==="player")continue;
+if(!n.moveAt||t>n.moveAt){const pois=[[17.5,10.5],[20,15],[21.5,10.5],[32,17],[20,12]];let dest;
+if(n.role==="police")dest=chance(.5)?[27,10.5]:[22,10.8];else if(n.role==="governor")dest=chance(.6)?[21.5,10.5]:[20,15.5];
+else if(chance(.32))dest=choice(pois);else dest=[n.home.x+randf(-2,2),n.home.y+randf(-1.6,1.6)];
+n.tx=clamp(dest[0],1.5,C.MAP_W-1.5);n.ty=clamp(dest[1],1.5,C.MAP_H-1.5);n.moveAt=t+rand(6000,16000)}
+const dx2=n.tx-n.x,dy2=n.ty-n.y,d=Math.hypot(dx2,dy2);n.isMoving=false;
+if(d>.08){const sp=.5*dt;n.x+=dx2/d*sp;n.y+=dy2/d*sp;n.isMoving=true}}}
+function loop(ts){if(!DOM)return;raf=requestAnimationFrame(loop);const dt=Math.min((ts-lastFrame)/1000,.05)||0;lastFrame=ts;
+if(!S||S.ended){drawWorld(ts);return}
+const overlayOpen=el("overlay").classList.contains("open");const inGame=el("gameUI").style.display!=="none";
+if(inGame&&!overlayOpen&&!S.paused){let dx=0,dy=0;
+if(keys.ArrowLeft||keys.a)dx--;if(keys.ArrowRight||keys.d)dx++;if(keys.ArrowUp||keys.w)dy--;if(keys.ArrowDown||keys.s)dy++;
+if(moveTarget){const ddx=moveTarget.x-S.player.x,ddy=moveTarget.y-S.player.y,dd=Math.hypot(ddx,ddy);if(dd<.15){moveTarget=null}else{dx=ddx/dd;dy=ddy/dd}}
+const len=Math.hypot(dx,dy);if(len>0){const run=(keys.Shift||keys.shift)?C.RUN_MULT:1;const sp=C.SPEED*run*dt/len;
+const nx=S.player.x+dx*sp,ny=S.player.y+dy*sp;
+if(!collides(nx,S.player.y))S.player.x=clamp(nx,1,C.MAP_W-1);if(!collides(S.player.x,ny))S.player.y=clamp(ny,1,C.MAP_H-1);
+S.player.step+=dt*10;if(Math.abs(dx)>Math.abs(dy))S.player.face=dx>0?"right":"left";else S.player.face=dy>0?"down":"up"}
+npcStep(dt,ts)}
+drawWorld(ts)}
+/* ================= entrada ================= */
+if(DOM){
+document.addEventListener("keydown",e=>{const key=e.key;const lk=key.toLowerCase();
+if(["arrowup","arrowdown","arrowleft","arrowright"," "].includes(lk))e.preventDefault();
+if(lk==="escape"){closeModal();return}
+const overlayOpen=el("overlay").classList.contains("open");
+if(!overlayOpen&&S&&!S.ended&&el("gameUI").style.display!=="none"){
+if(lk==="e"||key==="Enter"){interact();return}
+if(lk==="m"){showMinimap=!showMinimap;return}
+const tabs=["Resumo","Agricultura","Mercado","Vila","Governo","Diário"];const n=parseInt(lk);if(n>=1&&n<=6){setTab(tabs[n-1]);return}}
+keys[key]=true;keys[lk]=true});
+document.addEventListener("keyup",e=>{keys[e.key]=false;keys[e.key.toLowerCase()]=false});
+window.addEventListener("resize",resize);
+canvas.addEventListener("click",e=>{if(!S||el("overlay").classList.contains("open"))return;const r=canvas.getBoundingClientRect();const unit=Math.min(r.width/22,r.height/16);
+const camX=clamp(S.player.x,11,C.MAP_W-11),camY=clamp(S.player.y,8,C.MAP_H-8);
+const wx=(e.clientX-r.left-r.width/2)/unit+camX,wy=(e.clientY-r.top-r.height/2)/unit+camY;
+if(wx<0||wy<0||wx>C.MAP_W||wy>C.MAP_H)return;
+const n=getNearby();
+if(n&&((n.type==="npc"&&Math.hypot(n.npc.x-wx,n.npc.y-wy)<.8)||(n.type==="place"&&Math.hypot(n.x-wx,n.y-wy)<1)||(n.type==="cell"&&Math.hypot((n.parcel.x+(n.index%3)*1.05)-wx,(n.parcel.y+Math.floor(n.index/3)*1.05)-wy)<.9))){interact();return}
+if(!collides(wx,wy))moveTarget={x:wx,y:wy}});
+const touchKeys={tUp:["w"],tDown:["s"],tLeft:["a"],tRight:["d"]};
+for(const id in touchKeys){const btn=el(id);if(btn){const ks=touchKeys[id];const on=e=>{e.preventDefault();ks.forEach(k=>keys[k]=true)};const off=e=>{e.preventDefault();ks.forEach(k=>keys[k]=false)};btn.addEventListener("touchstart",on,{passive:false});btn.addEventListener("touchend",off,{passive:false});btn.addEventListener("touchcancel",off,{passive:false});btn.addEventListener("mousedown",on);btn.addEventListener("mouseup",off);btn.addEventListener("mouseleave",off)}}
+const act=el("tAct");if(act){const fire=e=>{e.preventDefault();if(!el("overlay").classList.contains("open"))interact()};act.addEventListener("touchstart",fire,{passive:false});act.addEventListener("click",fire)}
+if("ontouchstart" in window)document.body.classList.add("touch");
+document.addEventListener("click",e=>{const tabBtn=e.target.closest("[data-tab]");if(tabBtn){setTab(tabBtn.dataset.tab);return}
+const b=e.target.closest("[data-action]");if(!b)return;const a=b.dataset.action;
+if(a==="close"){closeModal();return}
+if(a==="help"){openModal("help");return}
+if(a==="controls"){openModal("controls");return}
+if(a==="menu"){refreshMenu();el("startScreen").classList.add("show");el("gameUI").style.display="none";save();return}
+if(a==="ending-menu"){refreshMenu();el("endingScreen").classList.remove("show");el("startScreen").classList.add("show");return}
+if(a==="continue"){load();return}
+if(a==="new"){if(HASLS){let raw=null;try{raw=localStorage.getItem(C.SAVE)}catch(err){}if(raw){openModal("confirm-new");return}}el("menuMessage").hidden=true;newCampaign();return}
+if(a==="new-confirm"){try{localStorage.removeItem(C.SAVE)}catch(err){}newCampaign();return}
+if(!S||S.ended)return;
+switch(a){
+case"wait":openModal("wait");break;
+case"wait-days":{const d=parseInt(b.dataset.days)||1;closeModal();rest(d);break}
+case"save":save();toast("Campanha salva.");break;
+case"talk":talkTo(b.dataset.id);break;
+case"mediate":{const npc=npcById(b.dataset.id);if(npc)tryMediate(npc);break}
+case"gift":giveGift(b.dataset.id,b.dataset.item);break;
+case"plant":{const p=S.parcels.find(x=>x.id===b.dataset.p);if(p)plant(p,parseInt(b.dataset.i),b.dataset.crop);closeModal();break}
+case"harvest-cell":{const p=S.parcels.find(x=>x.id===b.dataset.p);if(p)harvest(p,parseInt(b.dataset.i));closeModal();break}
+case"harvest-all":harvestAll(b.dataset.p);break;
+case"remove-illegal":{const p=S.parcels.find(x=>x.id===b.dataset.p);if(p)removeIllegal(p,parseInt(b.dataset.i));break}
+case"report-illegal":{const p=S.parcels.find(x=>x.id===b.dataset.p);if(p)reportIllegal(p,parseInt(b.dataset.i));break}
+case"friend-remove":{const p=S.parcels.find(x=>x.id===b.dataset.p);if(p)friendRemove(p,parseInt(b.dataset.i));closeModal();break}
+case"buy-parcel":rentOrBuy(b.dataset.p,"buy");break;
+case"rent-parcel":rentOrBuy(b.dataset.p,"rent");break;
+case"buy":buyItem(b.dataset.item,parseInt(b.dataset.qty)||1);break;
+case"buy-chicken":buyChicken();break;
+case"sell-all":{const item=b.dataset.item;sell(item,S.inventory[item]||0);break}
+case"sell-selected":{const q=el("sellQty");sell(b.dataset.item,Math.max(1,parseInt(q?q.value:"1")||1));break}
+case"work":work();break;
+case"eat":eatItem(b.dataset.item);break;
+case"sleep":sleepHome();break;
+case"nap":napHome();break;
+case"fish":goFish();break;
+case"deposit":bankOp("deposit",parseFloat(b.dataset.amt)||50);break;
+case"withdraw":bankOp("withdraw",parseFloat(b.dataset.amt)||50);break;
+case"donate":donateProject(b.dataset.project,parseFloat(b.dataset.amt)||25);break;
+case"permit":buyPermit();break;
+case"vote":castVote(b.dataset.c);break;
+case"endorse":endorse(b.dataset.c);break;
+case"ballot":openModal("cedula");break;
+}});
+}
+function rest(days){if(!Number.isInteger(days)||days<1)return;S.energy=clamp(S.energy+Math.min(days*45,100),0,100);advanceDays(days);if(!S.ended&&!S.paused)toast(`Você descansou por ${days} dia(s). Energia recuperada.`)}
+/* ================= boot & testes ================= */
+function boot(){refreshMenu();if(S||!DOM)return;drawWorld(performance.now())}
+boot();
+if(typeof globalThis!=="undefined"&&typeof globalThis.__VILA_TEST__==="undefined"){globalThis.__VILA_TEST__={newCampaign,advanceDays,getState:()=>S,runElection,castVote,plant,harvest,npcById,makeCandidates,validCandidates,talkTo,dayTick,gov,taxRate,effectivePrice,invasionAttempt,feudAttempt,tryMediate,rest,giveGift,daylightOf:daylight,saleUnit,permitCost,unitPriceOf,relOf:()=>null}}
+})();
+</script>
+</body>
+</html>
